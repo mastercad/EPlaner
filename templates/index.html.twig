@@ -1,0 +1,655 @@
+{% extends 'base.html.twig' %}
+
+{% block content %}
+    {#<div class="jumpotron">#}
+        <div class="container full-size">
+            <div class="row full-size">
+                <div class="col-sm-3">
+                    <div class=" ui-widget">
+                        <div class="ui-widget-header">
+                            Etagen
+                        </div>
+                        <ul class="floor-list ui-widget-content">
+                            <li class="add" id="new_floor_container">
+                                <i class="fa fa-plus new-floor" data-toggle="modal" data-target="#newFloorModal" title="neue Etage" style="color: dodgerblue;"></i>
+                                {#<i class="fa fa-plus new-floor" title="neue Etage" style="color: dodgerblue;"></i>#}
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+                <div class="col-sm-9 full-size">
+                    <div class="ui-widget row floor-column">
+                        <div id="current_floor_container">
+                            <span>Aktuelle Etage:</span>
+                            <span id="current_floor"></span>
+                            <span>Aktueller Raum:</span>
+                            <span id="current_room"></span>
+                        </div>
+
+                        <i class="far fa-edit"></i>
+                        <i class="far fa-user"></i>
+                    </div>
+
+                    <div class="row">
+                        <div class="full-size" id="col-sm-12 floor_tabs_container">
+                            <div id="floor_container" class="col-sm-12 full-size">
+
+                            </div>
+                            {#<canvas id="floor"></canvas>#}
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-sm-12 info">
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    {#</div>#}
+
+    <!-- Modal New Floor -->
+    <div class="modal fade" id="newFloorModal" tabindex="-1" role="dialog" aria-labelledby="newFloorModalLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="newFloorModalLabel">Neue Etage</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group row">
+                        <label for="floor_name" class="col-sm-2">
+                            Name
+                        </label>
+                        <div class="col-sm-9">
+                            <input class="form-control" type="text" id="floor_name">
+                        </div>
+                    </div>
+                    <hr />
+                    <div class="form-group row">
+                        <label for="floor_width" class="col-sm-2">
+                            Breite
+                        </label>
+                        <div class="col-sm-8">
+                            <input class="form-control" type="number" id="floor_width">
+                        </div>
+                        <span class="col-sm-1">cm</span>
+                    </div>
+                    <div class="form-group row">
+                        <label for="floor_length" class="col-sm-2">
+                            Länge
+                        </label>
+                        <div class="col-sm-8">
+                            <input class="form-control" type="number" id="floor_length">
+                        </div>
+                        <span class="col-sm-1">cm</span>
+                    </div>
+                    <div class="form-group row">
+                        <label for="floor_height" class="col-sm-2">
+                            Höhe
+                        </label>
+                        <div class="col-sm-8">
+                            <input class="form-control" type="number" id="floor_height">
+                        </div>
+                        <span class="col-sm-1">cm</span>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Abbrechen</button>
+                    <button type="button" class="btn btn-primary">Erstellen</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal New Room-->
+    <div class="modal fade" id="newRoomModal" tabindex="-1" role="dialog" aria-labelledby="newRoomModalLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="newRoomModalLabel">Neuer Raum</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group row">
+                        <label for="room_name" class="col-sm-2">
+                            Name
+                        </label>
+                        <div class="col-sm-9">
+                            <input class="form-control" type="text" id="room_name">
+                        </div>
+                    </div>
+                    <hr />
+                    <div class="form-group row">
+                        <label for="room_width" class="col-sm-2">
+                            Breite
+                        </label>
+                        <div class="col-sm-8">
+                            <input class="form-control" type="number" id="room_width">
+                        </div>
+                        <span class="col-sm-1">cm</span>
+                    </div>
+                    <div class="form-group row">
+                        <label for="room_length" class="col-sm-2">
+                            Länge
+                        </label>
+                        <div class="col-sm-8">
+                            <input class="form-control" type="number" id="room_length">
+                        </div>
+                        <span class="col-sm-1">cm</span>
+                    </div>
+                    {#<div class="form-group row">#}
+                        {#<label for="room_height" class="col-sm-2">#}
+                            {#Höhe#}
+                        {#</label>#}
+                        {#<div class="col-sm-8">#}
+                            {#<input class="form-control" type="number" id="room_height">#}
+                        {#</div>#}
+                        {#<span class="col-sm-1">cm</span>#}
+                    {#</div>#}
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Abbrechen</button>
+                    <button type="button" class="btn btn-primary">Erstellen</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+{% endblock content %}
+
+{% block inline_javascript %}
+    <script type="text/javascript">
+        $(document).ready(function() {
+
+            var currentEditedFloor = '';
+            var newFloorModal = $('#newFloorModal');
+            var newRoomModal = $('#newRoomModal');
+            var currentFloor = '';
+            var currentRoom = '';
+            var floorContainerScale = 1;
+            var houseData = [];
+            var resizeInterval = null;
+            var defaultOuterWallSize = 36;
+            var defaultInnerWallSize = 24;
+
+            $(window).resize(function() {
+                clearInterval(resizeInterval);
+                resizeInterval = setInterval(function() {
+                    reDrawFloor();
+                    clearInterval(resizeInterval);
+                }, 100);
+            });
+
+            /** create new floor **/
+            newFloorModal.find('.btn-primary').unbind('click').click(function() {
+                currentFloor = newFloorModal.find('#floor_name').val();
+                currentRoom = '';
+                var newRoomButton =
+                    '<li class="add">' +
+                        '<span class="icon fa fa-plus new-room" data-floor="'+currentFloor+'" title="neuer Raum" style="color: limegreen;"></span>' +
+                    '</li>';
+                houseData[currentFloor] = {
+                    name: currentFloor,
+                    length: newFloorModal.find('#floor_length').val(),
+                    width: newFloorModal.find('#floor_width').val(),
+                    height: newFloorModal.find('#floor_height').val(),
+                    posX: 0,
+                    posY: 0,
+                    rooms: []
+                };
+
+                var newFloor = $(
+                    '<li class="floor ui-state-default" data-bind="sortable:items">' +
+                        '<span class="ui-icon ui-icon-arrowthick-2-n-s"></span>' +
+                        '<span class="floor" data-floor="'+currentFloor+'">'+currentFloor+'</span>' +
+                        '<ul class="floor '+convertToValidClassName(currentFloor)+'" data-floor="'+currentFloor+'">'+newRoomButton+'</ul>' +
+                    '</li>');
+                $('.floor-list').prepend(newFloor);
+                switchFloor();
+                drawFloor();
+                init();
+                newFloorModal.modal('toggle');
+            });
+
+            /** create new room **/
+            newRoomModal.find('.btn-primary').unbind('click').click(function() {
+                currentRoom = newRoomModal.find('#room_name').val();
+                var room = {
+                    name: currentRoom,
+                    length: newRoomModal.find('#room_length').val(),
+                    width: newRoomModal.find('#room_width').val(),
+                    posX: 0,
+                    posY: 0,
+                    items: []
+                };
+
+                houseData[currentEditedFloor]['rooms'][currentRoom] = room;
+
+                var newRoom = $(
+                    '<li class="room">' +
+                        '<span class="room" data-room="'+currentRoom+'">'+currentRoom+'</span>' +
+                    '</li>'
+                );
+                $('.floor-list').find('.'+convertToValidClassName(currentEditedFloor)).prepend(newRoom);
+                switchRoom();
+                drawRoom(room);
+                init();
+                newRoomModal.modal('toggle');
+            });
+
+            function switchFloor() {
+                currentEditedFloor = '';
+                $('#current_floor').html(currentFloor).parent().fadeIn();
+                $('#current_room').fadeOut();
+                reDrawFloor();
+            }
+
+            function switchRoom(element) {
+                $('#floor').find('.room').each(function() {
+                   $(this).css({outline: 0});
+                });
+
+                if ((undefined === element                                              // called from "new Room"
+                    && currentEditedFloor === currentFloor)
+                    || $(element).parent().parent().data('floor') === currentFloor      // called from "switch Floor"
+                ) {
+                    $('#' + convertToValidClassName(currentFloor) + '_' + convertToValidClassName(currentRoom)).css({outline: '5px solid red'});
+                    $('#current_room').html(currentRoom).fadeIn();
+                    $('#current_room').html(currentRoom).parent().fadeIn();
+                }
+            }
+
+            function reDrawFloor() {
+                drawFloor();
+            }
+
+            function drawFloor() {
+                var floorData = houseData[currentFloor];
+
+                if (undefined === floorData
+                    || undefined === floorData.width
+                    || 0 === floorData.width.length
+                    || undefined === floorData.length
+                    || 0 === floorData.length.length
+                ) {
+                    return false;
+                }
+                computeScale();
+
+                var floorContainer = $('#floor_container');
+                var realWidth = floorData.width * floorContainerScale;
+                var realLength = floorData.length * floorContainerScale;
+
+                /** for further editable wall thickness **/
+                var borderLeft = defaultOuterWallSize * floorContainerScale;
+                var borderRight = defaultOuterWallSize * floorContainerScale;
+                var borderBottom = defaultOuterWallSize * floorContainerScale;
+                var borderTop = defaultOuterWallSize * floorContainerScale;
+
+                var floor = $('<div id="floor" class="" style="width: '+realWidth+'px; height: '+realLength+'px; ' +
+                    'border-left: '+borderLeft+'px solid transparent; ' +
+                    'border-right: '+borderRight+'px solid transparent; ' +
+                    'border-top: '+borderTop+'px solid transparent; ' +
+                    'border-bottom: '+borderBottom+'px solid transparent;' +
+                    'border-image: url(/images/wandschraffur.png) 5 repeat;">');
+
+                floorContainer.html('');
+                floorContainer.append(floor);
+                floor.droppable({
+                    accept: ".room",
+                    greedy: true,
+                    activeClass: "droppable-active",
+                    tolerance: "pointer",
+                    // accepted draggable item moved! show i will get them!
+                    activate: function( event, ui ) {
+                        $(this).addClass('ui-state-highlight').css('opacity', 0.5);
+                    },
+                    drop: function(event, ui) {
+                        $(this).removeClass('ui-state-highlight').css('opacity', 1);
+                        ui.draggable.removeData("current-droppable");
+                    }
+                });
+
+                if (0 === parseInt(floorContainerScale)) {
+                    computeScale();
+                }
+
+                Object.keys(floorData.rooms).forEach(function(room) {
+                    drawRoom(floorData.rooms[room]);
+                });
+            }
+
+            function drawFloorInCanvas() {
+                var canvas = document.getElementById('floor');
+                var context = canvas.getContext('2d');
+
+                var points = [
+                    new Point(1, 2),
+                    new Point(10, 20),
+                    new Point(30, 30),
+                    new Point(40, 80),
+                    new Point(100, 100),
+                    new Point(120, 100)
+                ];
+
+                context.strokeStyle = "black";
+                context.moveTo(points[0].startX, points[0].startY);
+
+                var counter = 1;
+
+                var interval = setInterval(function() {
+                    var point = points[counter++];
+                    context.lineTo(point.startX, point.startY);
+                    context.stroke();
+                    if (counter >= points.length) {
+                        clearInterval(interval);
+                    }
+                }, 10);
+                context.stroke();
+            }
+
+            var dropEventActive = false;
+
+            /** draw room in current floor **/
+            function drawRoom(roomData) {
+
+                console.log("CurrentFloor: " + currentFloor);
+                if (0 < currentEditedFloor.length
+                        && currentFloor !== currentEditedFloor
+                ) {
+                    return false;
+                }
+
+                if (undefined === roomData) {
+                    return false;
+                }
+
+//                if (undefined !== roomData.posX
+//                    && 0 < roomData.posX.length
+//                    && undefined !== roomData.posY
+//                    && 0 < roomData.posY.length
+//                ) {
+//
+//                } else if (undefined !== roomData.width
+                if (undefined !== roomData.width
+                    || 0 < roomData.width.length
+                    || undefined !== roomData.length
+                    || 0 < roomData.length.length
+                ) {
+                    var width = roomData.width;
+                    var length = roomData.length;
+
+                    var realWidth = width * floorContainerScale;
+                    var realLength = length * floorContainerScale;
+
+                    /** for further editable wall thickness **/
+                    var borderLeft = defaultInnerWallSize * floorContainerScale;
+                    var borderRight = defaultInnerWallSize * floorContainerScale;
+                    var borderBottom = defaultInnerWallSize * floorContainerScale;
+                    var borderTop = defaultInnerWallSize * floorContainerScale;
+                    var style = 'width: '+realWidth+'px; height: '+realLength+'px; ' +
+                            'border-left: '+borderLeft+'px solid transparent; ' +
+                            'border-right: '+borderRight+'px solid transparent; ' +
+                            'border-top: '+borderTop+'px solid transparent; ' +
+                            'border-bottom: '+borderBottom+'px solid transparent;' +
+                            'border-image: url(/images/wandschraffur.png) 5 repeat;';
+
+                    if (roomData.posX
+                        && roomData.posY
+                    ) {
+                        style += 'top: '+roomData.posY+'px; left: '+roomData.posX+'px;';
+                    }
+
+                    var room = $('<div id="'+convertToValidClassName(currentFloor)+'_'+convertToValidClassName(roomData.name)+'" class="room" '+
+                        'data-room="'+roomData.name+'"'+
+                        ' style="'+style+'">');
+
+                    $('#floor_container').find('#floor').append(room);
+
+                    room.draggable({
+                        refreshPositions: true,
+                        cursor: "move",
+                        snap: true,
+//                        snap: '.room',
+                        snapMode: "outer",
+                        snapTolerance: 10,
+                        revert: function(event, ui) {
+                            $('#floor_container').find('#floor').removeClass('ui-state-highlight').css('opacity', 1);
+                            $(this).data("uiDraggable").originalPosition = {
+                                top: (defaultOuterWallSize * floorContainerScale),
+                                left: (defaultOuterWallSize * floorContainerScale)
+                            };
+                            return !event;
+                        },
+                        start: function(event, ui) {
+                            currentRoom = $(this).data('room');
+                        },
+                        stop: function(event, ui) {
+                            houseData[currentFloor].rooms[currentRoom].posX = $(this).position().left;
+//                            houseData[currentFloor].rooms[currentRoom].posX = $(this).offset().left;
+                            houseData[currentFloor].rooms[currentRoom].posY = $(this).position().top;
+//                            houseData[currentFloor].rooms[currentRoom].posY = $(this).offset().top;
+                        },
+                        containment: "parent"
+                    });
+                }
+                return false;
+            }
+
+            function check_overlap(ui) {
+                var floor = $('#floor_container').find('#floor');
+                var ARE_overlapped=[], NOT_overlapped=[];
+                var left = 0;
+                var overlap = false;
+                var minPosX = 0;
+                var minPosY = 0;
+                var maxPosX = 0;
+                var maxPosY = 0;
+
+                var draggable = ui.helper;
+                floor.find('.room').not(draggable).each(function() {
+                    left = $(this).offset().left;
+                    overlap = !($(draggable).offset().left + $(draggable).width() < $(this).offset().left || $(draggable).offset().left > $(this).offset().left + $(this).width());
+                    (overlap) ? overlap = true : overlap = false;
+                    (overlap) ? ARE_overlapped.push($(this)):NOT_overlapped.push($(this));
+                });
+
+                if (ARE_overlapped.length > 0) {
+                    overlap = true;
+                }
+
+//                if (NOT_overlapped.length == 0) {
+//                    overlap = false;
+//                }
+
+                $(ARE_overlapped).each(function(){
+//                    console.log(this);
+                    $(this).addClass('overlap');
+//                    $(this).find('.info').html('<div class="warning red">OVERLAP!!!!</div>');
+                });
+
+                $(NOT_overlapped).each(function() {
+                    $(this).removeClass('overlap');
+//                    $(this).find('.info .red').removeClass('warning red');
+
+                    if ($(this).position().left == $(this).attr("origleft")) {
+                        $(this).find('.info').html('');
+                    }
+                });
+
+//                console.log("DRAGGABLE : " + draggable.offset().top + " x " + draggable.offset().left);
+//                console.log("DRAGGABLE : " + draggable.position().top + " x " + draggable.position().left);
+//                console.log("FLOOR : " + floor.offset().top + " x " + floor.offset().left);
+//                console.log("FLOOR : " + floor.position().top + " x " + floor.position().left);
+
+                if (draggable.position().top < floor.position().top) {
+//                    console.log("DRAUßEN!!!");
+                    ui.position = {top: floor.position().top + (defaultOuterWallSize * floorContainerScale)};
+                    return false;
+                } else if ((draggable.position().top + draggable.height() > floor.position().top + floor.height())) {
+//                    console.log("DRAUßEN!!!");
+                    ui.position = {top: floor.position().top + floor.height() - draggable.height() - (defaultOuterWallSize * floorContainerScale)};
+                    return false;
+                }
+
+                if (draggable.position().left < floor.position().left) {
+//                    console.log("DRAUßEN!!!");
+                    ui.position = {left: floor.position().left + (defaultOuterWallSize * floorContainerScale)};
+                    return false;
+                } else if ((draggable.position().left + draggable.width() > floor.position().left + floor.width())) {
+//                    console.log("DRAUßEN!!!");
+                    ui.position = {left: floor.position().left + floor.width() - draggable.width() - (defaultOuterWallSize * floorContainerScale)};
+                    return false;
+                }
+
+//                console.log("OVERLAPPED:");
+//                console.log(ARE_overlapped);
+//                console.log("NOT OVERLAPPED:");
+//                console.log(NOT_overlapped);
+                $('#result').text('Overlap: ' + overlap); // FOR TESTING display overlap status
+            }
+
+            /** compute points of given width and height regarding the current window size **/
+            function computePoints(length, width) {
+
+            }
+
+            function computeScale() {
+                var floorData = houseData[currentFloor];
+
+                if (undefined === floorData
+                    || undefined === floorData.width
+                    || 0 === floorData.width.length
+                    || undefined === floorData.length
+                    || 0 === floorData.length.length
+                ) {
+                    return false;
+                }
+                var width = floorData.width;
+                var length = floorData.length;
+
+//                var canvas = document.getElementById('floor');
+//                var canvasHeight = canvas.height;
+//                var canvasWidth = canvas.width;
+
+                var floorContainer = $('#floor_container');
+                var floorContainerLength = $(window).height() - $('.floor-column').height();
+//                var floorContainerWidth = floorContainer.outerWidth();
+                var floorContainerWidth = $('.floor-column').width();
+
+                if (length > width) {
+                    floorContainerScale = floorContainerLength / length;
+                } else {
+                    floorContainerScale = floorContainerWidth / width;
+                }
+                return floorContainerScale;
+            }
+
+            var Point = function(x, y) {
+                this.startX = x;
+                this.startY = y;
+            };
+
+            function init() {
+                if (null !== currentFloor
+                    && undefined !== currentFloor
+                    && 0 == currentFloor.length
+                ) {
+                    $('#current_floor_container').hide();
+                }
+
+                if (null !== currentRoom
+                    && undefined !== currentRoom
+                    && 0 == currentRoom.length
+                ) {
+                    $('#current_room_container').hide();
+                }
+
+                $('.floor-list span.floor').unbind('click').click(function () {
+                    var floor = $(this).data('floor');
+                    if (currentFloor != floor) {
+                        currentFloor = floor;
+                        switchFloor();
+                    }
+                });
+
+                $('.floor-list span.room').unbind('click').click(function () {
+                    var room = $(this).data('room');
+                    if (currentRoom != room) {
+                        currentRoom = room;
+                        switchRoom($(this));
+                    }
+                });
+
+                $('.floor-list').sortable({
+                    items: "li.floor",
+                    opacity: 0.5,
+                    start: function(event, ui){
+                        ui.placeholder.height(ui.item.height());
+                    },
+                    placeholder: 'ui-state-highlight'
+                }).disableSelection();
+
+                $('ul.floor').sortable({
+                    items: "li.room",
+                    opacity: 0.5,
+                    start: function(event, ui){
+                        ui.placeholder.height(ui.item.height());
+                    },
+                    placeholder: 'ui-state-highlight'
+                }).disableSelection();
+
+                /** only set the current floor value, let the framework do the modal job **/
+                $('.new-room').unbind('click').click(function() {
+                    currentEditedFloor = $(this).data('floor');
+                    newRoomModal.modal('show');
+                });
+
+                $('#floor').find('.room').each(function(room) {
+                    console.log(room);
+                });
+            }
+
+            function initRooms() {
+
+            }
+
+            function extractKeyFromStorage(key) {
+                var houseData = loadHouseData();
+
+                if ($(houseData).empty()) {
+                    return null;
+                }
+                return houseData[key];
+            }
+
+            function persistInStorage(key, data) {
+                var houseData = loadHouseData();
+                if (null === houseData) {
+                    houseData = [];
+                }
+                houseData[key] = data;
+                localStorage.setItem("houseData", JSON.stringify(houseData));
+            }
+
+            function loadHouseData() {
+                var houseData = localStorage.getItem("houseData");
+                if ($(houseData).empty()) {
+                    return null;
+                }
+                return JSON.parse(houseData);
+            }
+
+            function convertToValidClassName(string) {
+                return string.replace(/[^A-Z0-9a-z]+/g, '');
+            }
+
+            init();
+        });
+    </script>
+{% endblock inline_javascript %}

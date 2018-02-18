@@ -1,0 +1,348 @@
+{% extends 'base.html.twig' %}
+
+{% block content %}
+    <script src="/js/fabric.js"></script>
+    {#<div class="jumpotron">#}
+    <div class="container full-size">
+        <div class="row full-size">
+            <div class="col-sm-3">
+                <div class=" ui-widget">
+                    <div class="ui-widget-header">
+                        Etagen
+                    </div>
+                    <ul class="floor-list ui-widget-content">
+                        <li class="add" id="new_floor_container">
+                            <i class="fa fa-plus new-floor" data-toggle="modal" data-target="#newFloorModal" title="neue Etage" style="color: dodgerblue;"></i>
+                            {#<i class="fa fa-plus new-floor" title="neue Etage" style="color: dodgerblue;"></i>#}
+                        </li>
+                    </ul>
+                </div>
+            </div>
+            <div class="col-sm-9 full-size">
+                <div class="ui-widget row floor-column">
+                    <div id="current_floor_container">
+                        <span>Aktuelle Etage:</span>
+                        <span id="current_floor"></span>
+                        <span>Aktueller Raum:</span>
+                        <span id="current_room"></span>
+                    </div>
+
+                    <i class="far fa-edit"></i>
+                    <i class="far fa-user"></i>
+                </div>
+
+                <div class="row">
+                    <div class="full-size" id="col-sm-12 floor_tabs_container">
+                        <div id="floor_container" class="col-sm-12 full-size">
+                            <canvas id="can" width="400" height="400" style="position:absolute;top:10%;left:10%;border:2px solid;"></canvas>
+                            <div style="position:absolute;top:12%;left:43%;">Choose Color</div>
+                            <div style="position:absolute;top:15%;left:45%;width:10px;height:10px;background:green;" id="green" onclick="color(this)"></div>
+                            <div style="position:absolute;top:15%;left:46%;width:10px;height:10px;background:blue;" id="blue" onclick="color(this)"></div>
+                            <div style="position:absolute;top:15%;left:47%;width:10px;height:10px;background:red;" id="red" onclick="color(this)"></div>
+                            <div style="position:absolute;top:17%;left:45%;width:10px;height:10px;background:yellow;" id="yellow" onclick="color(this)"></div>
+                            <div style="position:absolute;top:17%;left:46%;width:10px;height:10px;background:orange;" id="orange" onclick="color(this)"></div>
+                            <div style="position:absolute;top:17%;left:47%;width:10px;height:10px;background:black;" id="black" onclick="color(this)"></div>
+                            <div style="position:absolute;top:20%;left:43%;">Eraser</div>
+                            <div style="position:absolute;top:22%;left:45%;width:15px;height:15px;background:white;border:2px solid;" id="white" onclick="color(this)"></div>
+                            <img id="canvasimg" style="position:absolute;top:10%;left:52%;" style="display:none;">
+                            <input type="button" value="save" id="btn" size="30" onclick="save()" style="position:absolute;top:55%;left:10%;">
+                            <input type="button" value="clear" id="clr" size="23" onclick="erase()" style="position:absolute;top:55%;left:15%;">
+
+                        </div>
+                    </div>
+                </div>
+
+                <div class="row">
+                    <div class="col-sm-12 info">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {#</div>#}
+
+    <!-- Modal New Floor -->
+    <div class="modal fade" id="newFloorModal" tabindex="-1" role="dialog" aria-labelledby="newFloorModalLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="newFloorModalLabel">Neue Etage</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group row">
+                        <label for="floor_name" class="col-sm-2">
+                            Name
+                        </label>
+                        <div class="col-sm-9">
+                            <input class="form-control" type="text" id="floor_name">
+                        </div>
+                    </div>
+                    <hr />
+                    <div class="form-group row">
+                        <label for="floor_width" class="col-sm-2">
+                            Breite
+                        </label>
+                        <div class="col-sm-8">
+                            <input class="form-control" type="number" id="floor_width">
+                        </div>
+                        <span class="col-sm-1">cm</span>
+                    </div>
+                    <div class="form-group row">
+                        <label for="floor_length" class="col-sm-2">
+                            Länge
+                        </label>
+                        <div class="col-sm-8">
+                            <input class="form-control" type="number" id="floor_length">
+                        </div>
+                        <span class="col-sm-1">cm</span>
+                    </div>
+                    <div class="form-group row">
+                        <label for="floor_height" class="col-sm-2">
+                            Höhe
+                        </label>
+                        <div class="col-sm-8">
+                            <input class="form-control" type="number" id="floor_height">
+                        </div>
+                        <span class="col-sm-1">cm</span>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Abbrechen</button>
+                    <button type="button" class="btn btn-primary">Erstellen</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal New Room-->
+    <div class="modal fade" id="newRoomModal" tabindex="-1" role="dialog" aria-labelledby="newRoomModalLabel" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="newRoomModalLabel">Neuer Raum</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                        <span aria-hidden="true">&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <div class="form-group row">
+                        <label for="room_name" class="col-sm-2">
+                            Name
+                        </label>
+                        <div class="col-sm-9">
+                            <input class="form-control" type="text" id="room_name">
+                        </div>
+                    </div>
+                    <hr />
+                    <div class="form-group row">
+                        <label for="room_width" class="col-sm-2">
+                            Breite
+                        </label>
+                        <div class="col-sm-8">
+                            <input class="form-control" type="number" id="room_width">
+                        </div>
+                        <span class="col-sm-1">cm</span>
+                    </div>
+                    <div class="form-group row">
+                        <label for="room_length" class="col-sm-2">
+                            Länge
+                        </label>
+                        <div class="col-sm-8">
+                            <input class="form-control" type="number" id="room_length">
+                        </div>
+                        <span class="col-sm-1">cm</span>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal">Abbrechen</button>
+                    <button type="button" class="btn btn-primary">Erstellen</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+    </div>
+
+{% endblock content %}
+
+{% block inline_javascript %}
+    <script type="text/javascript">
+        /*
+        var canvas,
+            ctx,
+            flag = false,
+            firstX = 0,
+            firstY = 0,
+            prevX = 0,
+            currX = 0,
+            prevY = 0,
+            currY = 0,
+            direction = null,
+            dot_flag = false;
+
+        var x = "black",
+            y = 2;
+
+        function init() {
+            canvas = document.getElementById('can');
+            ctx = canvas.getContext("2d");
+            w = canvas.width;
+            h = canvas.height;
+
+            canvas.addEventListener("mousemove", function (e) {
+                findxy('move', e)
+            }, false);
+            canvas.addEventListener("mousedown", function (e) {
+                findxy('down', e)
+            }, false);
+            canvas.addEventListener("mouseup", function (e) {
+                findxy('up', e)
+            }, false);
+            canvas.addEventListener("mouseout", function (e) {
+                findxy('out', e)
+            }, false);
+        }
+
+        function color(obj) {
+            switch (obj.id) {
+                case "green":
+                    x = "green";
+                    break;
+                case "blue":
+                    x = "blue";
+                    break;
+                case "red":
+                    x = "red";
+                    break;
+                case "yellow":
+                    x = "yellow";
+                    break;
+                case "orange":
+                    x = "orange";
+                    break;
+                case "black":
+                    x = "black";
+                    break;
+                case "white":
+                    x = "white";
+                    break;
+            }
+            if (x == "white") y = 14;
+            else y = 2;
+
+        }
+
+        function draw() {
+            ctx.beginPath();
+//            ctx.moveTo(prevX, prevY);
+            ctx.moveTo(firstX, firstY);
+            if ('x' == direction) {
+                ctx.lineTo(currX, firstY);
+            } else {
+                ctx.lineTo(firstX, currY);
+            }
+            ctx.strokeStyle = x;
+            ctx.lineWidth = y;
+            ctx.stroke();
+            ctx.closePath();
+        }
+
+        function erase() {
+            var m = confirm("Want to clear");
+            if (m) {
+                ctx.clearRect(0, 0, w, h);
+                document.getElementById("canvasimg").style.display = "none";
+            }
+        }
+
+        function save() {
+            document.getElementById("canvasimg").style.border = "2px solid";
+            document.getElementById("canvasimg").src = canvas.toDataURL();
+            document.getElementById("canvasimg").style.display = "inline";
+        }
+
+        function findxy(res, e) {
+            if (res == 'down') {
+                firstX = prevX;
+                firstY = prevY;
+                prevX = currX;
+                prevY = currY;
+                currX = e.clientX - canvas.offsetLeft;
+                currY = e.clientY - canvas.offsetTop;
+
+                flag = true;
+                dot_flag = true;
+                if (dot_flag) {
+                    ctx.beginPath();
+                    ctx.fillStyle = x;
+                    ctx.fillRect(currX, currY, 2, 2);
+                    ctx.closePath();
+                    dot_flag = false;
+                }
+            }
+
+            if (res == 'up' || res == "out") {
+                direction = null;
+                flag = false;
+            }
+
+            if (res == 'move') {
+                if (flag) {
+                    if (null == direction) {
+                        var diffX = Math.abs(currX - prevX);
+                        var diffY = Math.abs(currY - prevY);
+
+                        if (diffX > diffY) {
+                            direction = 'x';
+                        } else {
+                            direction = 'y';
+                        }
+                    }
+
+                    prevX = currX;
+                    currX = e.clientX - canvas.offsetLeft;
+                    prevY = currY;
+                    currY = e.clientY - canvas.offsetTop;
+                    draw();
+                }
+            }
+        }
+
+        $(document).ready(function() {
+           init();
+        });
+        */
+        var canvas = new fabric.Canvas('can', { selection: false });
+
+        var line, isDown;
+
+        canvas.on('mouse:down', function(o){
+            isDown = true;
+            var pointer = canvas.getPointer(o.e);
+            var points = [ pointer.x, pointer.y, pointer.x, pointer.y ];
+            line = new fabric.Line(points, {
+                strokeWidth: 5,
+                fill: 'red',
+                stroke: 'red',
+                originX: 'center',
+                originY: 'center'
+            });
+            canvas.add(line);
+        });
+
+        canvas.on('mouse:move', function(o){
+            if (!isDown) return;
+            var pointer = canvas.getPointer(o.e);
+            line.set({ x2: pointer.x, y2: pointer.y });
+            canvas.renderAll();
+        });
+
+        canvas.on('mouse:up', function(o){
+            isDown = false;
+        });
+    </script>
+{% endblock inline_javascript %}
