@@ -94,8 +94,6 @@ jobs:
           envs: GITHUB_SHA
           script: |
             rm -rf "${{ matrix.server.path }}/releases/${GITHUB_SHA}/var/log"
-            rm -rf "${{ matrix.server.path }}/releases/${GITHUB_SHA}/public/images/content/dynamisch"
-            rm -rf "${{ matrix.server.path }}/releases/${GITHUB_SHA}/public/upload"
 
       - name: Create directories
         uses: appleboy/ssh-action@master
@@ -108,7 +106,6 @@ jobs:
           port: ${{ matrix.server.port }}
           envs: GITHUB_SHA
           script: |
-            mkdir -p "${{ matrix.server.path }}/releases/${GITHUB_SHA}/public/images/content"
             mkdir -p "${{ matrix.server.path }}/releases/${GITHUB_SHA}/var"
 
       - name: Prepare Environment
@@ -135,7 +132,7 @@ jobs:
           port: ${{ matrix.server.port }}
           envs: GITHUB_SHA
           script: |
-            cd "${{ matrix.server.path }}/releases/${GITHUB_SHA}" && composer install --no-dev --no-interaction --prefer-dist --no-progress
+            cd "${{ matrix.server.path }}/releases/${GITHUB_SHA}" && composer install --no-interaction --prefer-dist --no-progress
 
       - name: Provide secrets
         uses: appleboy/ssh-action@master
