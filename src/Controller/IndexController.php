@@ -1,4 +1,5 @@
 <?php
+
 namespace App\Controller;
 
 use Symfony\Component\Routing\Annotation\Route;
@@ -11,7 +12,8 @@ class IndexController extends AbstractController
      *
      * @return void
      */
-    public function index() {
+    public function index()
+    {
         return $this->render('index.html.twig');
     }
 
@@ -20,7 +22,8 @@ class IndexController extends AbstractController
      *
      * @return void
      */
-    public function fabric() {
+    public function fabric()
+    {
         return $this->render('fabric.html.twig');
     }
 
@@ -29,7 +32,8 @@ class IndexController extends AbstractController
      *
      * @return void
      */
-    public function jcanvas() {
+    public function jcanvas()
+    {
         return $this->render('jcanvas.html.twig');
     }
 
@@ -38,7 +42,8 @@ class IndexController extends AbstractController
      *
      * @return void
      */
-    public function plane() {
+    public function plane()
+    {
         return $this->render('plane.html.twig');
     }
 }
