@@ -163,12 +163,41 @@
         </div>
     </div>
 
-    <div class="row">
-    </div>
-
 {% endblock content %}
 
 {% block inline_javascript %}
+<script src="/js/jcanvas.min.js"></script>
 <script type="text/javascript">
+    var mouseX = null;
+    var mouseY = null;
+
+    var canvas = document.getElementById('can');
+    var ctx = canvas.getContext("2d");
+    ctx.font = "30px Comic Sans MS";
+    ctx.fillStyle = "red";
+    ctx.textAlign = "center";
+    ctx.fillText("Hello World", canvas.width/2, canvas.height/2);
+
+    var snapToAmount = 40;
+
+    // Round the given value to the nearest multiple of n
+    function nearest(value, n) {
+        return Math.round(value / n) * n;
+    }
+
+    $('#can').drawArc({
+        layer: true,
+        draggable: true,
+        fillStyle: '#36c',
+        x: 160, y: 120,
+        radius: 50,
+        updateDragX: function (layer, x) {
+            return nearest(x, snapToAmount);
+        },
+        updateDragY: function (layer, y) {
+            return nearest(y, snapToAmount);
+        }
+    })
+
 </script>
 {% endblock inline_javascript %}

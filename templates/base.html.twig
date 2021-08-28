@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html>
     <head>
+        <meta charset="UTF-8">
         {% block header %}
         <title>E-Planer</title>
             <link rel="stylesheet" href="/css/default.css" >
@@ -14,6 +15,14 @@
             {#<script src="/js/jquery-ui-draggable-collision.min.js"></script>#}
             <script src="/js/bootstrap.min.js"></script>
             {#<script src="/js/fontawesome-all.min.js"></script>#}
+
+        {% block stylesheets %}
+            {#{{ encore_entry_link_tags('app') }}#}
+        {% endblock %}
+
+        {% block javascripts %}
+            {#{{ encore_entry_script_tags('app') }}#}
+        {% endblock %}
         {% endblock header %}
     </head>
     <body>
@@ -32,8 +41,7 @@
         {#</ul>#}
 
         <main role="main" style="min-height: 100%; height: 100%;">
-            {% block content %}
-            {% endblock content %}
+            {% block body %}{% endblock %}
         </main>
 
         <footer>

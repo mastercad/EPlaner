@@ -60,3 +60,21 @@ html, body, .full-size {
     outline: 4px solid red;
     background-color: yellowgreen;
 }
+
+.disabled {
+    cursor: default;
+    color: gray;
+}
+
+.enabled {
+    cursor: pointer;
+    color: black;
+}
+
+.device.hover {
+    outline: 1px solid blue;
+}
+
+.disabledTrans {
+    opacity: 0.4;
+}

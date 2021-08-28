@@ -1,0 +1,1747 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        {% block header %}
+        <title>E-Planer</title>
+            <link rel="stylesheet" href="/css/default.css" >
+            <link rel="stylesheet" href="/css/jquery-ui.min.css" >
+            <link rel="stylesheet" href="/css/bootstrap.min.css" >
+            <link rel="stylesheet" href="/css/fa-svg-with-js.css" >
+            <link rel="stylesheet" href="/css/fontawesome-all.min.css" >
+            <script src="/js/jquery-3.2.1.js"></script>
+            <script src="/js/jquery-ui.min.js"></script>
+            <script src="/js/bootstrap.min.js"></script>
+
+            <script src="/js/tools.js"></script>
+            <script src="/js/point.js"></script>
+            <script src="/js/line.js"></script>
+            <script src="/js/wall.js"></script>
+            <script src="/js/walls.js"></script>
+            <script src="/js/device.js"></script>
+            <script src="/js/devices.js"></script>
+            <script src="/js/connector.js"></script>
+            <script src="/js/connectors.js"></script>
+            <script src="/js/cable.js"></script>
+            <script src="/js/cables.js"></script>
+        {% endblock header %}
+    </head>
+    <body>
+
+        <main role="main" style="min-height: 100%; height: 100%;">
+            {% block body %}
+
+                <span id="undo" class="fa fa-undo disabled" ></span>
+                <span id="redo" class="fa fa-redo disabled"></span>
+
+                <div id="devices_container" style="position: relative; display: block;">
+                    <img id="steckdose_device"
+                         class="device"
+                         style="position: absolute; z-index: 999; border: 1px solid green; width: 40px; height: 40px;"
+                         src="/images/devices/steckdose.png" />
+                    <span id="deckenlampe_device" class="device" style="position: absolute; z-index: 999; left: 40px; border: 1px solid green; width: 10px; height: 10px; cursor: pointer;">O</span>
+                    <span id="lichtschalter_device" class="device" style="position: absolute; z-index: 999; left: 80px; border: 1px solid green; width: 10px; height: 10px; cursor: pointer;">W</span>
+                    <span id="cable" style="position: absolute; z-index: 999; left: 120px; cursor: pointer;">Leitung</span>
+                    <span id="grid" style="position: absolute; z-index: 999; left: 180px; cursor: pointer;">Grid</span>
+                    <span id="gridSnap" style="position: absolute; z-index: 999; left: 250px; cursor: pointer;">Grid Snap</span>
+                    <span id="floor_up" style="position: absolute; z-index: 999; left: 350px; cursor: pointer;">Floor up</span>
+                    <span id="floor_down" style="position: absolute; z-index: 999; left: 450px; cursor: pointer;">Floor down</span>
+                    <span id="floor_add" style="position: absolute; z-index: 999; left: 550px; cursor: pointer;">Floor add</span>
+                    <span id="floor_delete" style="position: absolute; z-index: 999; left: 650px; cursor: pointer;">Floor delete</span>
+                </div>
+
+                <div id="chalk_board" style="position: relative; top: 50px; left: 0; display: block;">
+                    <canvas id="layerGrid" width="800" height="600"
+                            style="position: absolute; left: 0; top: 0; z-index: 1;"></canvas>
+                    <canvas id="layerText" width="800" height="600"
+                            style="position: absolute; left: 0; top: 0; z-index: 10;"></canvas>
+                    <canvas id="layerWalls" width="800" height="600"
+                            style="position: absolute; left: 0; top: 0; z-index: 20;"></canvas>
+                    <canvas id="layerCables" width="800" height="600"
+                            style="position: absolute; left: 0; top: 0; z-index: 30;"></canvas>
+                    <canvas id="layerConnectors" width="800" height="600"
+                            style="position: absolute; left: 0; top: 0; z-index: 40;"></canvas>
+                    <canvas id="layerHighlights" width="800" height="600"
+                            style="position: absolute; left: 0; top: 0; z-index: 50;"></canvas>
+                    <canvas id="layerHelplines" width="800" height="600"
+                            style="position: absolute; left: 0; top: 0; z-index: 60;"></canvas>
+                    <canvas id="layerMeasurement" width="800" height="600"
+                            style="position: absolute; left: 0; top: 0; z-index: 70;"></canvas>
+                    <div id="layerDevices" style="position: absolute; top: 0; left: 0; width: 800px; height: 600px; z-index: 80;"></div>
+                    <canvas id="layerDraw" width="800" height="600"
+                            style="position: absolute; left: 0; top: 0; z-index: 90;"></canvas>
+                </div>
+                {#<canvas id="canvas" width="800" height="600" style="border: 1px solid black;"></canvas>#}
+                <div style="position: relative; top: 815px; left: 20px;">
+                    <span id="measure"></span>
+                    <span id="currentLength"></span>
+                </div>
+
+                <div id="wall_detail" style="border: 1px solid gray; z-index: 100;">
+                    <canvas id="layerWallDetail"></canvas>
+                </div>
+            {% endblock body %}
+        </main>
+
+        <footer>
+            {% block footer %}
+            {% endblock footer %}
+        </footer>
+
+        <div id="eplaner_modal"></div>
+
+        {% block inline_javascript %}
+            <script>
+
+                const ACTION_DRAW_WALL = 'drawWall';
+                const ACTION_DRAW_CABLE = 'drawCable';
+
+                const ACTION_DEVICE_ADD = 'deviceAdd';
+                const ACTION_DEVICE_REMOVE = 'deviceRemove';
+                const ACTION_DEVICE_MOVE = 'deviceMove';
+                const ACTION_CABLE_ADD = 'cableAdd';
+                const ACTION_CABLE_REMOVE = 'cableRemove';
+                const ACTION_CABLE_MOVE = 'cableMove';
+                const ACTION_WALL_ADD = 'wallAdd';
+                const ACTION_WALL_REMOVE = 'wallRemove';
+                const ACTION_WALL_MOVE = 'wallMove';
+
+                /**
+                 * Action, who current executed, null if no action in progress, move item, draw line, or something else
+                 * is possible here
+                 *
+                 * @type {null|string}
+                 */
+                var currentMouseBtnState = null;
+
+                var currentAction = null;
+
+                /**
+                 * current direction of MouseMove, is needed for measurements and lines if pressed a support key
+                 *
+                 * @type {null}
+                 */
+                var forcedDirection = null;
+                var mousePos = null;
+
+                var canvasGrid = document.getElementById('layerGrid');
+                var canvasText = document.getElementById('layerText');
+                var canvasWalls = document.getElementById('layerWalls');
+                var canvasCables = document.getElementById('layerCables');
+                var canvasConnectors = document.getElementById('layerConnectors');
+                var canvasHighlights = document.getElementById('layerHighlights');
+                var canvasHelpLines = document.getElementById('layerHelplines');
+                var canvasMeasurement = document.getElementById('layerMeasurement');
+                var canvasDraw = document.getElementById('layerDraw');
+
+                var contextGrid = canvasGrid.getContext('2d');
+                var contextText = canvasText.getContext('2d');
+                var contextWalls = canvasWalls.getContext('2d');
+                var contextCables = canvasCables.getContext('2d');
+                var contextConnectors = canvasConnectors.getContext('2d');
+                var contextHighlights = canvasHighlights.getContext('2d');
+                var contextHelpLines = canvasHelpLines.getContext('2d');
+                var contextMeasurement = canvasMeasurement.getContext('2d');
+                var contextDraw = canvasDraw.getContext('2d');
+
+                var mouseStart = null;
+                var lastMouse = null;
+                var newPos = null;
+                var moveDeviceStartPos = null;
+
+                var currentAngle = 0;
+                var measure = null;
+                var gridSize = 5;
+                var angleSteps = 15;
+                var tolerance = 5;
+                var endPointToleranze = 2;
+                var endPointSize = 5;
+                var nearEndPoint = null;
+
+                var activeWall = null;
+                var activeWallMouseHit = null;
+                var activeWallSuggestedConnector = null;
+
+                var activeDevice = null;
+                var activeStartDevice = null;
+                var activeEndDevice = null;
+                var currentCableEndPoint = null;
+                var currentFloor = 0;
+
+                var activeConnector = null;
+                var activeStartConnector = null;
+                var activeEndConnector = null;
+
+                var activeCable = null;
+                var activeCableMouseHit = null;
+
+                var ratio = null;
+                var grid = 10;
+                var space = 50;
+                var measurementHelper = 15;
+
+                var shiftPressed = false;
+                var ctrlPressed = false;
+                var cableActive = false;
+                var gridActive = false;
+                var gridSnaps = false;
+
+                var redo = [];
+                var undo = [];
+                var currentConnectors = [];
+
+                var floors = [];
+                var floorOrder = [];
+                var walls = new Walls();
+                var devices = new Devices();
+                var cables = new Cables();
+
+                function writeMessage(message) {
+                    contextText.clearRect(0, 0, canvasText.width, canvasText.height);
+                    contextText.font = '8pt Calibri';
+                    contextText.fillStyle = 'black';
+                    contextText.fillText(message, 80, 20);
+                    contextText.fillText(currentMouseBtnState, 80, 40);
+                }
+
+                function drawMeasurement(device) {
+                    contextMeasurement.clearRect(0, 0, canvasMeasurement.width, canvasMeasurement.height);
+                    contextMeasurement.font = '8pt Calibri';
+                    contextMeasurement.fillStyle = 'black';
+                    contextMeasurement.lineWidth = 0.5;
+                    contextMeasurement.strokeStyle = '#000000';
+
+                    var deviceCenter = calculateCenterPointForDevice(device);
+
+                    contextMeasurement.beginPath();
+                    contextMeasurement.moveTo(deviceCenter.getX(), deviceCenter.getY());
+
+                    var endPoint = new Point(0, 0);
+
+                    if (null !== activeWall) {
+                        var tang1 = Math.hypot(activeWall.getStartPoint().getX(), activeWall.getStartPoint().getY(), deviceCenter.getX(), deviceCenter.getY());
+                        var tang2 = Math.hypot(deviceCenter.getX(), deviceCenter.getY(), activeWall.getEndPoint().getX(), activeWall.getEndPoint().getY());
+
+                        if (tang1 > tang2) {
+                            endPoint = activeWall.getStartPoint();
+                        } else {
+                            endPoint = activeWall.getEndPoint();
+                        }
+                        contextMeasurement.lineTo(endPoint.getX(), endPoint.getY());
+                    } else {
+                        // hier eher wände suchen auf der höhe des devices
+                        // dabei in richtung abhängig von der position in den einzelnen bereichen (links,oben,unten,rechts)
+                        // wenn es keine wand gibt => bis zur außenwand gehen
+                        // lower right
+                        if (deviceCenter.getX() >= canvasMeasurement.width / 2
+                            && deviceCenter.getY() >= canvasMeasurement.height / 2
+                        ) {
+                            endPoint.setX(space);
+                            endPoint.setY(space);
+
+                            // upper right
+                        } else if (deviceCenter.getX() >= canvasMeasurement.width / 2
+                            && deviceCenter.getY() < canvasMeasurement.height / 2
+                        ) {
+                            endPoint.setX(space);
+                            endPoint.setY(canvasMeasurement.height - space);
+
+                            floors[currentFloor].walls.each(function(wall) {
+                                if (wall.checkPointMatches(deviceCenter)) {
+                                    if (!wall.isAngular()) {
+                                        var coordinates = false;
+
+                                        if (false !== (coordinates = calculateMouseHitPoint(wall, deviceCenter))) {
+                                            console.log("EndPoint:");
+                                            console.log(coordinates);
+                                            endPoint = coordinates;
+                                        }
+                                    } else {
+                                        // x wall
+                                        if (wall.getStartPoint().getX() < deviceCenter.getX()
+                                            && wall.getStartPoint().getY() <= deviceCenter.getY()
+                                            && wall.getEndPoint().getX() < deviceCenter.getX()
+                                            && wall.getEndPoint().getY() >= deviceCenter.getY()
+                                            && wall.getStartPoint().getX() > endPoint.getX()
+                                        ) {
+                                            endPoint.setX(wall.getStartPoint().getX());
+                                        }
+
+                                        if (wall.getStartPoint().getX() < deviceCenter.getX()
+                                            && wall.getStartPoint().getY() > deviceCenter.getY()
+                                            && wall.getEndPoint().getX() > deviceCenter.getX()
+                                            && wall.getEndPoint().getY() > deviceCenter.getY()
+                                            && wall.getStartPoint().getY() < endPoint.getY
+                                        ) {
+                                            endPoint.setY(wall.getStartPoint().getY());
+                                        }
+                                    }
+
+                                    contextMeasurement.beginPath();
+                                    contextMeasurement.moveTo(deviceCenter.getX(), deviceCenter.getY());
+                                    contextMeasurement.lineTo(deviceCenter.getX(), endPoint.getY());
+                                    contextMeasurement.moveTo(deviceCenter.getX(), deviceCenter.getY());
+                                    contextMeasurement.lineTo(endPoint.getX(), deviceCenter.getY());
+                                    contextMeasurement.stroke();
+                                    contextMeasurement.closePath();
+                                }
+                            });
+                        // upper left
+                        } else if (deviceCenter.getX() < canvasMeasurement.width / 2
+                            && deviceCenter.getY() < canvasMeasurement.height / 2
+                        ) {
+                            endPoint.setX(canvasMeasurement.width - space);
+                            endPoint.setY(canvasMeasurement.height - space);
+
+                            floors[currentFloor].walls.each(function(wall) {
+                                // x wall
+                                if (wall.getStartPoint().getX() > deviceCenter.getX()
+                                    && wall.getStartPoint().getY() <= deviceCenter.getY()
+                                    && wall.getEndPoint().getX() > deviceCenter.getX()
+                                    && wall.getEndPoint().getY() >= deviceCenter.getY()
+                                    && wall.getStartPoint().getX() < endPoint.getX
+                                ) {
+                                    endPoint.setX(wall.getStartPoint().getX());
+                                } else if (wall.getStartPoint().getX() < deviceCenter.getX()
+                                    && wall.getStartPoint().getY() > deviceCenter.getY()
+                                    && wall.getEndPoint().getX() > deviceCenter.getX()
+                                    && wall.getEndPoint().getY() > deviceCenter.getY()
+                                    && wall.getStartPoint().getY() < endPoint.getY()
+                                ) {
+                                    endPoint.setY(wall.getStartPoint().getY());
+                                }
+                            });
+                        // lower left
+                        } else if (deviceCenter.getX() < canvasMeasurement.width / 2
+                            && deviceCenter.getY() >= canvasMeasurement.height / 2
+                        ) {
+                            endPoint.setX(canvasMeasurement.width - space);
+                            endPoint.setY(space);
+                        }
+
+                        contextMeasurement.save();
+                        contextMeasurement.translate(deviceCenter.getX(), deviceCenter.getY());
+                        contextMeasurement.rotate(Math.PI * 2);
+//                        contextMeasurement.textAlign = 'center';
+//                        contextMeasurement.fillText((getEndPoint().getX()) * ratio, deviceX, 8 / 2);
+
+                        var lengthX = ""+Math.abs(myNamespace.round((endPoint.getX() - deviceCenter.getX()) * ratio, 2));
+                        if (0 == lengthX) {
+                            lengthX = "Please set First wall for reference!";
+                        } else {
+                            lengthX += "m";
+                        }
+                        contextMeasurement.fillText(lengthX, -105, -25);
+                        contextMeasurement.restore();
+
+                        contextMeasurement.save();
+                        contextMeasurement.translate(deviceCenter.getX(), deviceCenter.getY());
+                        contextMeasurement.rotate(-Math.PI / 2);
+
+                        var lengthY = ""+Math.abs(myNamespace.round((endPoint.getY() - deviceCenter.getY()) * ratio, 2));
+                        if (0 == lengthY) {
+                            lengthY = "Please set First wall for reference!";
+                        } else {
+                            lengthY += "m";
+                        }
+                        contextMeasurement.fillText(lengthY, -25, 100);
+                        contextMeasurement.restore();
+                    }
+                    contextMeasurement.stroke();
+                    contextMeasurement.closePath();
+                }
+
+                function calculateCenterPointForDevice(device) {
+                    return new Point(
+                        device.getPosition().getX() + (device.getWidth() / 2),
+                        device.getPosition().getY() + (device.getHeight() / 2)
+                    );
+                }
+
+                function calculateCutPoint(wall, point) {
+
+                }
+
+                /**
+                 * @param {CanvasRenderingContext2D} context
+                 * @param {Point} startPoint
+                 * @param {Point} endPoint
+                 */
+                function drawWall(context, startPoint, endPoint) {
+                    context.setLineDash([0]);
+                    context.beginPath();
+                    context.moveTo(startPoint.getX(), startPoint.getY());
+                    context.lineTo(endPoint.getX(), endPoint.getY());
+                    context.lineWidth = 1;
+                    context.strokeStyle = '#000000';
+                    context.stroke();
+                    context.closePath();
+                }
+
+                /**
+                 * @param {CanvasRenderingContext2D} context
+                 * @param {Point} startPoint
+                 * @param {Point} endPoint
+                 */
+                function drawCable(context, startPoint, endPoint) {
+                    console.log("IN DRAWCABLE!");
+                    context.setLineDash([5, 15]);
+                    context.beginPath();
+                    context.moveTo(startPoint.getX(), startPoint.getY());
+                    context.lineTo(endPoint.getX(), endPoint.getY());
+                    context.lineWidth = 1;
+                    context.strokeStyle = 'green';
+                    context.stroke();
+                    context.closePath();
+                }
+
+                function drawHelpLines() {
+                    contextHelpLines.clearRect(0, 0, canvasHelpLines.width, canvasHelpLines.height);
+                    contextHelpLines.lineWidth = 1;
+                    contextHelpLines.strokeStyle = '#00BFFF';
+
+                    // walls
+                    floors[currentFloor].walls.each(function(wall) {
+                        if (wall.getStartPoint().getX() == newPos.getX()
+                            || wall.getStartPoint().getY() == newPos.getY()
+                        ) {
+                            contextHelpLines.beginPath();
+                            contextHelpLines.moveTo(wall.getStartPoint().getX(), wall.getStartPoint().getY());
+                            contextHelpLines.lineTo(newPos.getX(), newPos.getY());
+                            contextHelpLines.stroke();
+                            contextDraw.closePath();
+                        } else if (wall.getEndPoint().getX() == newPos.getX()
+                            || wall.getEndPoint().getY() == newPos.getY()
+                        ) {
+                            contextHelpLines.beginPath();
+                            contextHelpLines.moveTo(wall.getEndPoint().getX(), wall.getEndPoint().getY());
+                            contextHelpLines.lineTo(newPos.getX(), newPos.getY());
+                            contextHelpLines.stroke();
+                            contextDraw.closePath();
+                        }
+                    });
+
+                    // if draw cable active, also consider cables for helplines
+                    if (ACTION_DRAW_CABLE === currentAction) {
+                        floors[currentFloor].cables.each(function(cable) {
+                            if (cable.getStartPoint().getX() == newPos.getX()
+                                    || cable.getStartPoint().getY() == newPos.getY()
+                            ) {
+                                contextHelpLines.beginPath();
+                                contextHelpLines.moveTo(cable.getStartPoint().getX(), cable.getStartPoint().getY());
+                                contextHelpLines.lineTo(newPos.getX(), newPos.getY());
+                                contextHelpLines.stroke();
+                                contextDraw.closePath();
+                            } else if (cable.getEndPoint().getX() == newPos.getX()
+                                    || cable.getEndPoint().getY() == newPos.getY()
+                            ) {
+                                contextHelpLines.beginPath();
+                                contextHelpLines.moveTo(cable.getEndPoint().getX(), cable.getEndPoint().getY());
+                                contextHelpLines.lineTo(newPos.getX(), newPos.getY());
+                                contextHelpLines.stroke();
+                                contextDraw.closePath();
+                            }
+                        });
+                    }
+                }
+
+                function calculateCoordinatesByGrid() {
+                    var distanceX = mousePos.getX() - mouseStart.getX();
+                    var distanceY = mousePos.getY() - mouseStart.getY();
+                    var distance = Math.hypot(Math.abs(distanceX), Math.abs(distanceY));
+                    var angle = calculateAngle(mouseStart, mousePos);
+                    contextText.fillText("Angle : "+angle, 60, 100);
+
+                    if (0 < angle
+                        && 90 > angle
+                    ) {
+                        if (mousePos.getY() > (lastMouse.getY() + gridSize)) {
+                            currentAngle += angleSteps;
+                            lastMouse.setY(mousePos.getY() + gridSize);
+                        } else if (mousePos.getY() < (lastMouse.getY() - gridSize)) {
+                            currentAngle -= angleSteps;
+                            lastMouse.setY(mousePos.getY() - gridSize);
+                        }
+                    } else if (90 < angle
+                        && 180 > angle
+                    ) {
+                        if (mousePos.getX() > (lastMouse.getX() + gridSize)) {
+                            currentAngle += angleSteps;
+                            lastMouse.setX(mousePos.getX() + gridSize);
+                        } else if (mousePos.getX() < (lastMouse.getX() - gridSize)) {
+                            currentAngle -= angleSteps;
+                            lastMouse.setX(mousePos.getX() - gridSize);
+                        }
+                    } else if (180 < angle
+                        && 270 > angle
+                    ) {
+                    } else if (270 < angle
+                        && 360 > angle
+                    ) {
+                    }
+                    return calculateCoordinates(mouseStart, currentAngle, distance);
+                }
+
+                function calculateCoordinates(point, angle, length) {
+                    length = typeof length !== 'undefined' ? length : 10;
+                    angle = angle * Math.PI / 180; // if you're using degrees instead of radians
+
+                    return new Point(
+                        length * Math.cos(angle) + point.getX(),
+                        length * Math.sin(angle) + point.getY()
+                    );
+                }
+
+                function calculateAngle(point1, point2) {
+                    var dy = point2.getY() - point1.getY();
+                    var dx = point2.getX() - point1.getX();
+                    var theta = Math.atan2(dy, dx); // range (-PI, PI]
+                    theta *= 180 / Math.PI; // rads to degs, range (-180, 180]
+                    if (theta < 0) {  // range [0, 360)
+                        theta = 360 + theta;
+                    }
+                    return theta;
+                }
+
+                function getMousePos(canvas, evt) {
+                    var rect = canvas.getBoundingClientRect();
+                    var x = evt.clientX - rect.left;
+                    var y = evt.clientY - rect.top;
+
+                    if (gridSnaps
+                        && null !== currentAction
+                    ) {
+                        x = Math.round(x / grid) * grid;
+                        y = Math.round(y / grid) * grid;
+                    }
+
+                    return new Point(x, y);
+                }
+
+                window.addEventListener('keydown', function(evt) {
+                    var code = evt.keyCode || evt.which;
+                    console.log("Key: "+code);
+                    switch (code) {
+                        // ctrl
+                        case 17:
+                            ctrlPressed = true;
+                            break;
+                        // shift
+                        case 16:
+                            shiftPressed = true;
+                            break;
+                        // esc
+                        case 27:
+                            contextDraw.clearRect(0, 0, canvasDraw.width, canvasDraw.height);
+                            contextMeasurement.clearRect(0, 0, canvasMeasurement.width, canvasMeasurement.height);
+                            contextHelpLines.clearRect(0, 0, canvasHelpLines.width, canvasHelpLines.height);
+                            contextHighlights.clearRect(0, 0, canvasHighlights.width, canvasHighlights.height);
+                            currentAction = null;
+                            activeStartConnector = null;
+                            mouseStart = null;
+                            newPos = null;
+                            refreshCanvas();
+                            break;
+                    }
+                }, false);
+
+                window.addEventListener('keyup', function(evt) {
+                    var code = evt.keyCode || evt.which;
+                    console.log("Key: "+code);
+                    switch (code) {
+                        case 17:
+                            ctrlPressed = false;
+                            break;
+                        case 16:
+                            shiftPressed = false;
+                            break;
+                    }
+                }, false);
+
+                window.addEventListener('mousemove', function(event) {
+
+                    mousePos = getMousePos(canvasDraw, event);
+                    activeWall = null;
+                    activeCable = null;
+                    activeWallMouseHit = null;
+
+                    if (null !== activeWall
+                        && 2 === event.button
+                    ) {
+                        currentAction = ACTION_WALL_MOVE;
+                    } else if (null !== activeDevice
+                        && 2 === event.button
+                    ) {
+                        currentAction = ACTION_DEVICE_MOVE;
+                    }
+
+//                    if ('down' === currentMouseBtnState
+                    if (null !== currentAction
+                        && null !== mouseStart
+                        && mousePos.getX() > space
+                        && mousePos.getX() < canvasDraw.width - space
+                        && mousePos.getY() > space
+                        && mousePos.getY() < canvasDraw.height - space
+                    ) {
+                        console.log("MOUSE MOVE!");
+                        newPos = mousePos;
+                        contextDraw.clearRect(0, 0, canvasDraw.width, canvasDraw.height);
+                        contextDraw.fillText(
+                            myNamespace.round(calculateAngle(mouseStart, newPos), 2) + "°",
+                            newPos.getX(),
+                            newPos.getY()
+                        );
+
+                        if (null !== ratio) {
+                            var x0 = mouseStart.getX() < newPos.getX() ? mouseStart.getX() : newPos.getX();
+                            var y0 = mouseStart.getY() < newPos.getY() ? mouseStart.getY() : newPos.getY();
+                            var x1 = newPos.getX() > mouseStart.getX() ? newPos.getX() : mouseStart.getX();
+                            var y1 = newPos.getY() > mouseStart.getY() ? newPos.getY() : mouseStart.getY();
+                            var currentLength = Math.hypot(x1 - x0, y1 - y0);
+                            $('#currentLength').html(myNamespace.round(currentLength * ratio, 2) + " cm");
+                        }
+
+                        if (true !== cableActive) {
+                            drawWall(contextDraw, mouseStart, newPos);
+                        } else {
+                            drawCable(contextDraw, mouseStart, newPos);
+                        }
+                        drawHelpLines();
+                    }
+
+                    contextHighlights.clearRect(0, 0, canvasHighlights.width, canvasHighlights.height);
+                    contextConnectors.clearRect(0, 0, canvasConnectors.width, canvasConnectors.height);
+
+                    floors[currentFloor].walls.each(function(wall) {
+                        if (false !== handleMousemove(wall, mousePos, tolerance)) {
+                            return false;
+                        }
+                    });
+
+                    handleMousemoveForDevice();
+                    handleMousemoveForCable();
+                    handleMousemoveForConnector();
+
+                }, false);
+
+                canvasDraw.addEventListener('mousedown', function(event) {
+//                    console.log("MouseDown!");
+                    console.log(getMousePos(canvasDraw, event));
+
+                    if (null === currentAction
+                        && mousePos.getX() > space
+                        && mousePos.getX() < canvasDraw.width - space
+                        && mousePos.getY() > space
+                        && mousePos.getY() < canvasDraw.height - space
+                    ) {
+                        if (true === cableActive
+                            && null !== activeConnector
+                        ) {
+                            currentAction = ACTION_DRAW_CABLE;
+                            handleMouseButton(event);
+                        } else if (true !== cableActive
+                            && null === activeDevice
+                        ) {
+                            currentAction = ACTION_DRAW_WALL;
+//                        } else if (null !== activeDevice) {
+//                            currentAction = ACTION_DEVICE_MOVE;
+                        }
+                    } else {
+                        handleMouseButton(event);
+                    }
+//                    $("#canvas").css("cursor", "none");
+                    writeMessage("MouseDown!");
+                }, false);
+
+                canvasDraw.addEventListener('mouseup', function(event) {
+//                    console.log("MOUSE UP!");
+                    contextDraw.clearRect(0, 0, canvasDraw.width, canvasDraw.height);
+                    contextHighlights.clearRect(0, 0, canvasHighlights.width, canvasHighlights.height);
+                    contextHelpLines.clearRect(0, 0, canvasHelpLines.width, canvasHelpLines.height);
+
+                    mousePos = mouseStart = getMousePos(canvasDraw, event);
+//                    if ('down' === currentMouseBtnState
+                    if (null !== mouseStart
+                        && 0 < mouseStart.getX()
+                        && 0 < mouseStart.getY()
+                        && null !== newPos
+                        && 0 < newPos.getX()
+                        && 0 < newPos.getY()
+                        && (mouseStart.getX() != newPos.getX()
+                            || mouseStart.getY() != newPos.getY())
+                    ) {
+                        handleMouseButton(event);
+                    }
+                    writeMessage("MouseUp!");
+                }, false);
+
+                // doubleclick for walls
+                canvasDraw.addEventListener('dblclick', function() {
+                    console.log("DBLCLICK!");
+                    currentMouseBtnState = 'dblclick';
+                    currentAction = null;
+                    if (null !== activeWall) {
+                        showWallEdit(activeWall);
+                    }
+                });
+
+                function showWallEdit(wall) {
+                    var wallDetailView = jQuery('#wall_detail');
+                    wallDetailView.css({
+                        position: 'absolute',
+                        top: wall.getStartPoint().getY() + "px",
+                        left: wall.getStartPoint().getX() + "px",
+                        width: wall.getEndPoint().getX() - wall.getStartPoint().getX() + "px",
+//                        width: 500,
+                        height: wall.getEndPoint().getY() - wall.getStartPoint().getY() + "px",
+                        "background-color": "white"
+//                        height: 400
+                    }).animate({
+                        width: '500px',
+                        height: '400px'
+                    });
+                }
+
+                // doubleclick for devices
+                document.getElementById('layerDevices').addEventListener('dblclick', function() {
+                    console.log("DBLCLICK!");
+                    currentMouseBtnState = 'dblclick';
+                    currentAction = null;
+                    if (null !== activeCable) {
+                    }
+                });
+
+                function handleMouseButton(event) {
+                    console.log(currentAction);
+
+                    switch (currentAction) {
+                        case ACTION_DRAW_WALL: {
+                            handleDrawWall(event);
+                            break;
+                        }
+                        case ACTION_DRAW_CABLE: {
+                            handleDrawCable();
+                            break;
+                        }
+                        case ACTION_DEVICE_MOVE: {
+                            break;
+                        }
+                        case ACTION_WALL_MOVE: {
+                            break;
+                        }
+                    }
+
+                    if (true === this.ctrlPressed) {
+                        mouseStart = newPos;
+                    } else {
+                        mouseStart = null;
+//                        currentAction = null;
+                    }
+                    newPos = null;
+//                    $("#canvas").css("cursor", "default");
+                    refreshCanvas();
+                    refreshButtons();
+                }
+
+                function handleDrawWall() {
+                    // looks like doubleclick
+                    if (null === newPos) {
+                        return false;
+                    }
+                    // maus ist aktuell auf keiner wand
+//                    if (null === activeWall) {
+                        var wall = new Wall(
+                            mouseStart,
+                            newPos
+                        );
+
+                        if (null === ratio) {
+                            var length = prompt("Wie lang ist diese Wand? (cm)", null);
+                            if (null !== length
+                                && !isNaN(length)
+                            ) {
+                                var wallLength = Math.hypot(
+                                    wall.getEndPoint().getX() - wall.getStartPoint().getX(),
+                                    wall.getEndPoint().getY() - wall.getStartPoint().getY()
+                                );
+                                ratio = length / wallLength;
+
+                                floors[currentFloor].walls.addWall(wall);
+                                // new items added to history => reset redo
+                                redo = [];
+                                undo.push({
+                                    type: ACTION_WALL_ADD,
+                                    object: wall
+                                });
+                            }
+                        } else {
+                            floors[currentFloor].walls.addWall(wall);
+                            // new items added to history => reset redo
+                            redo = [];
+                            undo.push({
+                                type: ACTION_WALL_ADD,
+                                object: wall
+                            });
+                        }
+
+                        // over existing wall => close circle
+                        if (null !== activeWall
+                            || false === ctrlPressed
+                        ) {
+                            currentAction = null;
+                        }
+                    }
+//                }
+
+                function handleDrawCable() {
+                    if (null === ratio) {
+                        alert("Bitte erst Wände setzen, bevor Kabel verlegt werden können!");
+                        cableActive = false;
+                        currentAction = null;
+                        return false;
+                    } else if (null !== activeConnector
+                        && (null !== activeStartConnector
+                            || null !== activeCable)
+                    ) {
+                        console.log("Add Cable!");
+                        // kabel sollen alle Connectoren haben. auch end-und startpunkte von kabeln sind connectoren
+                        var cable = new Cable(
+                            activeStartConnector.getZoneStart(),
+                            activeConnector.getZoneStart()
+                        );
+                        floors[currentFloor].cables.addCable(cable);
+                        undo.push({
+                            type: ACTION_CABLE_ADD,
+                            object: cable
+                        });
+                        activeDevice = null; // kann eventuell zu problemen führen, ist zum test drin!
+                        activeConnector = null;
+                        activeStartConnector = null;
+                        currentAction = null;
+                        redo = [];
+                    } else if (null !== activeConnector) {
+                        activeStartConnector = activeConnector;
+                        activeConnector = null;
+                    }
+                }
+
+                function refreshCanvas() {
+                    contextWalls.clearRect(0, 0, canvasWalls.width, canvasWalls.height);
+                    contextWalls.lineWidth = 1;
+                    contextWalls.strokeStyle = '#C0C0C0';
+                    contextWalls.beginPath();
+                    contextWalls.rect(space, space, canvasWalls.width - (space * 2), canvasWalls.height - (space * 2));
+                    contextWalls.stroke();
+                    contextWalls.closePath();
+
+                    floors[currentFloor].walls.each(function(wall) {
+                        drawWall(contextWalls, wall.getStartPoint(), wall.getEndPoint());
+                    });
+
+                    contextCables.clearRect(0, 0, canvasCables.width, canvasCables.height);
+                    floors[currentFloor].cables.each(function(cable) {
+                        drawCable(contextCables, cable.getStartPoint(), cable.getEndPoint());
+                    });
+
+                    var devicesLayer = jQuery('#layerDevices');
+                    devicesLayer.html('');
+                    floors[currentFloor].devices.each(function(device) {
+                        drawDevice(device);
+                    });
+                }
+
+                function drawDevice(device) {
+                    var devicesLayer = jQuery('#layerDevices');
+                    devicesLayer.append(device.getElement());
+                }
+
+                function linePointNearestMouse(wall, point) {
+                    var lerp = function(a, b, x) {
+                        return (a + x * (b - a));
+                    };
+                    var dx = wall.getEndPoint().getX() - wall.getStartPoint().getX();
+                    var dy = wall.getEndPoint().getY() - wall.getStartPoint().getY();
+                    var t = ((point.getX() - wall.getStartPoint().getX()) * dx + (point.getY() - wall.getStartPoint().getY()) *dy) / (dx * dx + dy * dy);
+
+                    return new Point(
+                        lerp(wall.getStartPoint().getX(), wall.getEndPoint().getX(), t),
+                        lerp(wall.getStartPoint().getY(), wall.getEndPoint().getY(), t)
+                    );
+                }
+
+                function calculateMouseHitPoint(wall, sourcePoint) {
+
+                    if (!wall.checkPointMatches(sourcePoint)) {
+                        return false;
+                    }
+
+                    var linePoint = linePointNearestMouse(wall, sourcePoint);
+
+                    var dx = sourcePoint.getX() - linePoint.getX();
+                    var dy = sourcePoint.getY() - linePoint.getY();
+                    var dsx = sourcePoint.getX() - wall.getStartPoint().getX();
+                    var dsy = sourcePoint.getY() - wall.getStartPoint().getY();
+                    var dex = sourcePoint.getX() - wall.getEndPoint().getX();
+                    var dey = sourcePoint.getY() - wall.getEndPoint().getY();
+
+                    var distance = Math.hypot(dx, dy);
+                    var distanceStartToMouse = Math.hypot(dsx, dsy);
+                    var distanceEndToMouse = Math.hypot(dex, dey);
+
+                    return linePoint;
+
+                }
+
+                function handleMousemove(wall, point, tolerance) {
+
+                    if (!wall.checkPointMatches(point)) {
+                        return false;
+                    }
+
+                    var linePoint = linePointNearestMouse(wall, point);
+
+                    var dx = point.getX() - linePoint.getX();
+                    var dy = point.getY() - linePoint.getY();
+                    var dsx = point.getX() - wall.getStartPoint().getX();
+                    var dsy = point.getY() - wall.getStartPoint().getY();
+                    var dex = point.getX() - wall.getEndPoint().getX();
+                    var dey = point.getY() - wall.getEndPoint().getY();
+
+                    var distance = Math.hypot(dx, dy);
+                    var distanceStartToMouse = Math.hypot(dsx, dsy);
+                    var distanceEndToMouse = Math.hypot(dex, dey);
+
+                    if (distance < tolerance) {
+                        contextHighlights.setLineDash([0]);
+
+                        activeWall = wall;
+                        activeWallMouseHit = linePoint;
+
+                        // near endpoints of wall
+                        if (distanceStartToMouse < endPointToleranze
+                            || distanceEndToMouse < endPointToleranze
+                        ) {
+                            highlightWallEnd(wall, linePoint);
+                        }
+                        highlightWall(wall);
+                        return linePoint;
+                    }
+                    return false;
+                }
+
+                function highlightWall(wall) {
+                    contextHighlights.beginPath();
+                    contextHighlights.moveTo(wall.getStartPoint().getX(), wall.getStartPoint().getY());
+                    contextHighlights.lineTo(wall.getEndPoint().getX(), wall.getEndPoint().getY());
+                    contextHighlights.lineWidth = tolerance;
+                    contextHighlights.strokeStyle = 'red';
+                    contextHighlights.stroke();
+                    contextHighlights.closePath();
+                }
+
+                function highlightWallEnd(wall, wallHit) {
+                    contextHighlights.fillStyle = "green";
+                    contextHighlights.beginPath();
+                    contextHighlights.rect(wallHit.getX() - endPointSize, wallHit.getY() - endPointSize, endPointSize * 2, endPointSize * 2);
+                    contextHighlights.closePath();
+                    contextHighlights.fill();
+                }
+
+                function handleMousemoveForDevice() {
+                    var deviceHover = false;
+                    var devicesLayer = jQuery('#layerDevices');
+
+                    if (true === cableActive
+                        && null !== activeDevice
+                    ) {
+//                        console.log("habe Active Device und sollte über dessen Connector sein!");
+                        highlightConnector(activeDevice);
+                        deviceHover = true;
+                    }
+                    if (true === cableActive
+                        && null !== activeStartDevice
+                    ) {
+//                        console.log("habe actives start device und sollte über dessen connector sein!");
+                        highlightConnector(activeStartDevice);
+                        deviceHover = true;
+                    }
+
+                    if (true === cableActive
+                        && null !== activeDevice
+                    ) {
+                        // noch nicht am zeichnen eines kabels
+//                        if (ACTION_DRAW_CABLE !== currentAction
+                        if (null !== activeDevice
+                            && (activeDevice.getPosition().getX() - 20 > mousePos.getX()
+                                || activeDevice.getPosition().getY() - 20 > mousePos.getY()
+                                || activeDevice.getWidth() + activeDevice.getPosition().getX() + 20 < mousePos.getX()
+                                || activeDevice.getHeight() + activeDevice.getPosition().getY() + 20 < mousePos.getY())
+                        ) {
+//                            console.log("Hatte Device, bin aber raus!");
+                            activeDevice = null;
+                            activeConnector = null;
+                        } else if (null === activeConnector
+                            && null !== activeDevice
+                            && activeDevice.getPosition().getX() <= mousePos.getX()
+                            && activeDevice.getPosition().getY() <= mousePos.getY()
+                            && activeDevice.getWidth() + activeDevice.getPosition().getX() >= mousePos.getX()
+                            && activeDevice.getHeight() + activeDevice.getPosition().getY() >= mousePos.getY()
+                        ) {
+//                            console.log("Über bereits aktivem device, habe aber noch keinen Connector!");
+                            deviceHover = true;
+                            drawConnectors(activeDevice);
+//                        } else if (null === activeConnector) {
+//                            console.log("habe noch keinen aktiven Connector!");
+//                            deviceHover = true;
+//                            activeConnector =
+//                            drawConnectors(activeDevice);
+//                        } else if (ACTION_DRAW_CABLE === currentAction) {
+                        }
+                    } else {
+                        floors[currentFloor].devices.each(function (device) {
+                            if (device.getPosition().getX() <= mousePos.getX()
+                                && device.getPosition().getY() <= mousePos.getY()
+                                && device.getWidth() + device.getPosition().getX() >= mousePos.getX()
+                                && device.getHeight() + device.getPosition().getY() >= mousePos.getY()
+                            ) {
+//                                console.log("Habe device gefunden, was activ ist!");
+//                                console.log(device);
+//                                console.log("Über device!");
+                                activeDevice = device;
+                                deviceHover = true;
+                                if (cableActive) {
+//                                    drawConnectorsForDevice(device);
+
+                                    if (0 === activeDevice.getConnectors().length) {
+                                        createConnectors(activeDevice);
+                                    }
+                                    drawConnectors(activeDevice);
+                                } else {
+                                    jQuery(device.getElement())
+                                        .addClass('hover')
+                                        .draggable({
+                                            cancel: "a.ui-icon", // clicking an icon won't initiate dragging
+//                                                revert: "invalid", // when not dropped, the item will revert back to its initial position
+                                            revert: true, // bounce back when dropped
+                                            cursor: "move",
+                                            revertDuration: 0,
+                                            helper: 'clone',
+                                            containment: 'layerDevices',
+
+                                            start: function () {
+                                                moveDeviceStartPos = jQuery(this).position();
+                                                var parent = activeDevice.getParent();
+
+                                                if (parent instanceof Wall) {
+                                                    parent.removeDevice(device);
+                                                }
+                                                currentMouseBtnState = 'device';
+                                                jQuery(this).addClass('re-draggable disabledTrans');
+                                            },
+                                            drag: function (event, ui) {
+                                                if (mousePos.getX() > space
+                                                    && mousePos.getX() < canvasDraw.width - space
+                                                    && mousePos.getY() > space
+                                                    && mousePos.getY() < canvasDraw.height - space
+                                                ) {
+                                                    if (gridSnaps) {
+                                                        ui.position = {
+                                                            top: considerGridForCoordinate(ui.position.top - (ui.helper.height() / 2)) + (ui.helper.height() / 2),
+                                                            left: considerGridForCoordinate(ui.position.left - (ui.helper.width() / 2)) + (ui.helper.width() / 2)
+                                                        };
+                                                    }
+
+                                                    drawMeasurement(
+                                                        new Device(
+                                                            new Point(ui.position.left, ui.position.top),
+                                                            ui.helper,
+                                                            null !== activeWall ? activeWall : null
+                                                        )
+                                                    );
+                                                } else {
+                                                    contextMeasurement.clearRect(0, 0, canvasMeasurement.width, canvasMeasurement.height);
+                                                }
+
+                                            },
+                                            stop: function (event) {
+                                                currentMouseBtnState = null;
+                                                jQuery(this).removeClass('disabledTrans');
+                                            }
+                                        });
+                                    var zIndex = devicesLayer.css('z-index');
+
+                                    if (150 != zIndex) {
+                                        devicesLayer.data('z-index-orig', zIndex);
+                                        devicesLayer.css({'z-index': 150});
+                                    }
+                                }
+                            } else {
+//                                console.log("Außerhalb device!");
+                                jQuery(device.getElement()).removeClass('hover');
+                            }
+                        });
+
+                        if (false === deviceHover) {
+//                            console.log("Kein Hover aktiv!");
+                            activeDevice = null;
+                            if (undefined !== devicesLayer.data('z-index-orig')) {
+                                devicesLayer.css({'z-index': devicesLayer.data('z-index-orig')});
+                            }
+                        }
+                        return deviceHover;
+                    }
+                }
+
+                function handleMousemoveForCable() {
+                    if (activeWall
+                        && ACTION_DRAW_CABLE === currentAction
+                    ) {
+                        suggestConnectorForWall(activeWall);
+                    } else {
+                        floors[currentFloor].cables.each(function (cable) {
+                            if (!cable.checkPointMatches(mousePos)) {
+                                return false;
+                            }
+
+                            var linePoint = linePointNearestMouse(cable, mousePos);
+
+                            var dx = mousePos.getX() - linePoint.getX();
+                            var dy = mousePos.getY() - linePoint.getY();
+                            var dsx = mousePos.getX() - cable.getStartPoint().getX();
+                            var dsy = mousePos.getY() - cable.getStartPoint().getY();
+                            var dex = mousePos.getX() - cable.getEndPoint().getX();
+                            var dey = mousePos.getY() - cable.getEndPoint().getY();
+
+                            var distance = Math.hypot(dx, dy);
+                            var distanceStartToMouse = Math.hypot(dsx, dsy);
+                            var distanceEndToMouse = Math.hypot(dex, dey);
+
+                            if (distance < tolerance) {
+                                activeCable = cable;
+                                drawHighlightConnector(cable.getStartPoint().getParent());
+                                drawHighlightConnector(cable.getEndPoint().getParent());
+                                highlightDevice(cable.getStartPoint().getParent().getParent());
+                                highlightDevice(cable.getEndPoint().getParent().getParent());
+                                activeCableMouseHit = linePoint;
+                                contextHighlights.setLineDash([5, 15]);
+
+                                // near endpoints of cable
+                                if (distanceStartToMouse < endPointSize
+                                    || distanceEndToMouse < endPointSize
+                                ) {
+                                    contextHighlights.fillStyle = "green";
+                                    contextHighlights.beginPath();
+                                    contextHighlights.rect(linePoint.getX() - endPointSize, linePoint.getY() - endPointSize, endPointSize * 2, endPointSize * 2);
+                                    contextHighlights.closePath();
+                                    contextHighlights.fill();
+
+                                    currentCableEndPoint = distanceStartToMouse < distanceEndToMouse ? cable.getStartPoint() : cable.getEndPoint();
+                                }
+                                contextHighlights.beginPath();
+                                contextHighlights.moveTo(cable.getStartPoint().getX(), cable.getStartPoint().getY());
+                                contextHighlights.lineTo(cable.getEndPoint().getX(), cable.getEndPoint().getY());
+                                contextHighlights.lineWidth = tolerance;
+                                contextHighlights.strokeStyle = 'red';
+                                contextHighlights.stroke();
+                                contextHighlights.closePath();
+
+                                return linePoint;
+                            } else {
+                                jQuery('.hover').removeClass('hover');
+                                activeDevice = null;
+                            }
+                        });
+                        return false;
+                    }
+                }
+
+                function handleMousemoveForConnector() {
+                    if (null !== activeDevice) {
+                        activeDevice.getConnectors().each(function(connector) {
+
+                        });
+                    }
+
+                    if (null !== activeStartConnector) {
+                        drawHighlightConnector(activeStartConnector);
+                    }
+                }
+
+                function enableButton(btn) {
+                    jQuery(btn).removeClass('disabled');
+                    jQuery(btn).addClass('enabled');
+                }
+
+                function disableButton(btn) {
+                    jQuery(btn).removeClass('enabled');
+                    jQuery(btn).addClass('disabled');
+                }
+
+                function refreshButtons() {
+                    if (0 < undo.length) {
+                        enableButton(jQuery('#undo'));
+                    } else {
+                        disableButton(jQuery('#undo'));
+                    }
+                    if (0 < redo.length) {
+                        enableButton(jQuery('#redo'));
+                    } else {
+                        disableButton(jQuery('#redo'));
+                    }
+                }
+
+                jQuery('#undo').unbind('click').click(function() {
+                    if (0 < undo.length) {
+                        var lastAction = undo.pop();
+                        console.log(lastAction);
+                        if (ACTION_WALL_ADD == lastAction.type) {
+                            floors[currentFloor].walls.removeWall(lastAction.object);
+                        } else if (ACTION_DEVICE_ADD === lastAction.type) {
+                            floors[currentFloor].devices.removeDevice(lastAction.object);
+                            jQuery(lastAction.object.getElement()).remove();
+                        } else if (ACTION_DEVICE_MOVE === lastAction.type) {
+                            lastAction.newPos = new Point(
+                                jQuery(lastAction.object.getElement()).position().left,
+                                jQuery(lastAction.object.getElement()).position().top
+                            );
+                            jQuery(lastAction.object.getElement()).css({
+                                top: lastAction.oldPos.getY(),
+                                left: lastAction.oldPos.getX()
+                            });
+                            lastAction.object.getPosition().setX(lastAction.oldPos.getX());
+                            lastAction.object.getPosition().setY(lastAction.oldPos.getY());
+                            lastAction.object.refresh();
+                        }
+                        redo.push(lastAction);
+                        refreshButtons();
+                        refreshCanvas();
+                    }
+                });
+
+                jQuery('#redo').unbind('click').click(function() {
+                    if (0 < redo.length) {
+                        var lastAction = redo.pop();
+                        console.log(lastAction);
+                        if (ACTION_WALL_ADD == lastAction.type) {
+                            floors[currentFloor].walls.addWall(lastAction.object);
+                        } else if (ACTION_DEVICE_ADD === lastAction.type) {
+                            floors[currentFloor].devices.addDevice(lastAction.object);
+                            jQuery("#layerDevices").append(lastAction.object.getElement());
+                        } else if (ACTION_DEVICE_MOVE === lastAction.type) {
+                            jQuery(lastAction.object.getElement()).css({
+                                top: lastAction.newPos.getY(),
+                                left: lastAction.newPos.getX()
+                            });
+                            lastAction.object.getPosition().setX(lastAction.newPos.getX());
+                            lastAction.object.getPosition().setY(lastAction.newPos.getY());
+                            lastAction.object.refresh();
+                        }
+                        undo.push(lastAction);
+                        refreshButtons();
+                        refreshCanvas();
+                    }
+                });
+
+                jQuery('#cable').unbind('click').click(function() {
+                    cableActive = !cableActive;
+                    if (cableActive) {
+                        jQuery(this).css({outline: "1px solid green"});
+                    } else {
+                        jQuery(this).css({outline: "0px"});
+                    }
+                });
+
+                jQuery('#grid').unbind('click').click(function() {
+                    gridActive = !gridActive;
+                    if (gridActive) {
+                        jQuery(this).css({outline: "1px solid green"});
+                        drawPointGrid();
+                    } else {
+                        jQuery(this).css({outline: "0px"});
+                        contextGrid.clearRect(0, 0, canvasGrid.width, canvasGrid.height);
+                    }
+                });
+
+                jQuery('#gridSnap').unbind('click').click(function() {
+                    gridSnaps = !gridSnaps;
+                    if (gridSnaps) {
+                        jQuery(this).css({outline: "1px solid green"});
+                    } else {
+                        jQuery(this).css({outline: "0px"});
+                    }
+                });
+
+                jQuery('#floor_up').unbind('click').click(function() {
+                    increaseFloor();
+                });
+
+                jQuery('#floor_down').unbind('click').click(function() {
+                    decreaseFloor();
+                });
+
+                jQuery('#floor_add').unbind('click').click(function() {
+                });
+
+                jQuery('#floor_delete').unbind('click').click(function() {
+                });
+
+                Math.hypot = Math.hypot || function(x, y) {
+                    return Math.sqrt(x*x + y*y);
+                };
+
+                jQuery('.device').draggable({
+                    cancel: "a.ui-icon", // clicking an icon won't initiate dragging
+//                    revert: "invalid", // when not dropped, the item will revert back to its initial position
+                    revert: true, // bounce back when dropped
+                    cursor: "move",
+                    revertDuration: 0,
+                    helper: 'clone',
+                    containment: 'layerDevices',
+
+                    start: function (event, ui) {
+                        currentMouseBtnState = 'device';
+                    },
+                    drag: function(event, ui) {
+                        if (mousePos.getX() > space
+                            && mousePos.getX() < canvasDraw.width - space
+                            && mousePos.getY() > space
+                            && mousePos.getY() < canvasDraw.height - space
+                        ) {
+                            var top = ui.position.top;
+                            var left = ui.position.left;
+
+                            if (gridSnaps) {
+                                ui.position = {
+                                    top: considerGridForCoordinate(top - (ui.helper.height() / 2)) + (ui.helper.height() / 2),
+                                    left: considerGridForCoordinate(left - (ui.helper.width() / 2)) + (ui.helper.width() / 2)
+                                };
+                            }
+
+                            var chalkBoard = jQuery("#chalk_board");
+                            drawMeasurement(
+                                new Device(
+                                    new Point(chalkBoard.position().left, chalkBoard.position().top),
+                                    ui.helper,
+                                    null !== activeWall ? activeWall : null
+                                )
+                            );
+                        }
+
+                    },
+                    stop: function () {
+                        currentMouseBtnState = null;
+//                        activeDevice = null;
+                    }
+                });
+
+                jQuery("#layerDevices").droppable({
+                    accept: ".device",
+                    out: function(ui, event) {
+                        contextMeasurement.clearRect(0, 0, canvasMeasurement.width, canvasMeasurement.height);
+                    },
+//                    activeClass: "ui-state-highlight",
+                    drop: function (ev, ui) {
+                        console.log("Drop device in Devices Layer!");
+                        contextMeasurement.clearRect(0, 0, canvasMeasurement.width, canvasMeasurement.height);
+                        ui.draggable.removeClass('disabledTrans');
+                        var item = ui.draggable.clone();
+                        var device = floors[currentFloor].devices.searchDeviceByElement(jQuery(item));
+
+                        // item from menu bar
+                        if (!jQuery(ui.draggable).hasClass('re-draggable')) {
+
+                            jQuery('#layerDevices').append(item);
+                            var width = jQuery(item).width();
+                            var height = jQuery(item).height();
+
+                            var left = ui.offset.left - jQuery(this).offset().left;
+                            var top = ui.offset.top - jQuery(this).offset().top;
+
+                            if (gridSnaps) {
+                                left = considerGridForCoordinate(left - (width / 2)) + (width / 2);
+                                top = considerGridForCoordinate(top- (height / 2)) + (height / 2);
+                            }
+
+                            if (undefined === device) {
+                                device = new Device(
+                                    new Point(left, top),
+                                    item,
+                                    null !== activeWall ? activeWall : null
+                                );
+                                device.refresh();
+                                if (null !== activeWall) {
+                                    activeWall.addDevice(device);
+                                }
+                                floors[currentFloor].devices.addDevice(device);
+                                undo.push({
+                                    type: ACTION_DEVICE_ADD,
+                                    object: device
+                                });
+                            } else {
+//                                var origDevice = jQuery.extend({}, device);
+//                                device.setPosition(new Point(left, top));
+                                device.getPosition().setX(left);
+                                device.getPosition().setY(top);
+                                device.refresh();
+
+//                                jQuery(this).data('orig-left', jQuery(this).position().left);
+//                                jQuery(this).data('orig-top', jQuery(this).position().top);
+
+                                if (null !== activeWall) {
+                                    activeWall.addDevice(device);
+                                }
+//                                undo.push({
+//                                    type: ACTION_DEVICE_MOVE,
+//                                    object: device,
+//                                    oldPos: new Point(
+//                                        jQuery(ui.draggable).position().left,
+//                                        jQuery(ui.draggable).position().top
+//                                    )
+//                                    oldPos: new Point(
+//                                        left,
+//                                        top
+//                                    )
+//                                });
+                            }
+
+                            if (activeWall) {
+                                console.log("Setze parent des devices auf activeWall!");
+                                device.setParent(activeWall);
+                            }
+
+                            jQuery(item).css({
+                                top: top+"px",
+                                left: left+"px"
+                            });
+                        // item allready in canvas dropped
+                        } else {
+
+                            ui.draggable.css({
+                                top: ui.position.top,
+                                left: ui.position.left
+                            });
+
+                            if (undefined === device) {
+                                device = new Device(
+                                    new Point(ui.position.left, ui.position.top),
+                                    ui.draggable,
+                                    null !== activeWall ? activeWall : null
+                                );
+                                device.refresh();
+                                floors[currentFloor].devices.addDevice(device);
+                                undo.push({
+                                    type: ACTION_DEVICE_ADD,
+                                    object: device
+                                });
+                            } else {
+//                                var origDevice = jQuery.extend({}, device);
+                                device.getPosition().setX(ui.position.left);
+                                device.getPosition().setY(ui.position.top);
+                                device.refresh();
+
+                                if (null !== activeWall) {
+                                    activeWall.addDevice(device);
+                                }
+
+                                undo.push({
+                                    type: ACTION_DEVICE_MOVE,
+                                    object: device,
+//                                    oldPos: new Point(
+//                                        jQuery(ui.draggable).position().left,
+//                                        jQuery(ui.draggable).position().top
+//                                    )
+//                                    oldPos: new Point(
+//                                        ui.position.left,
+//                                        ui.position.top
+//                                    )
+                                    oldPos: new Point(
+                                        moveDeviceStartPos.left,
+                                        moveDeviceStartPos.top
+                                    )
+                                });
+                            }
+                            if (null !== activeWall) {
+                                activeWall.addDevice(device);
+                                device.setParent(activeWall);
+                            }
+                        }
+                        redo = [];
+                        refreshCanvas();
+                    }
+                });
+
+                function considerGridForCoordinate(point) {
+                    if (gridSnaps) {
+                        return Math.round(point / grid) * grid;
+                    }
+                    return point;
+                }
+
+                function drawPointGrid() {
+                    contextGrid.clearRect(0, 0, canvasGrid.width, canvasGrid.height);
+                    contextGrid.fillStyle = "gray";
+                    contextGrid.beginPath();
+                    for (var x = 50 + grid; x <= canvasGrid.width - 50 - grid; x += grid) {
+                        for (var y = 50 + grid; y <= canvasGrid.height - 50 - grid; y += grid) {
+                            contextGrid.beginPath();
+                            contextGrid.arc(x, y, 1, 0, 360);
+                            contextGrid.fill();
+                            contextGrid.closePath();
+                        }
+                    }
+                }
+
+                function drawQuadGrid() {
+                    contextGrid.clearRect(0, 0, canvasGrid.width, canvasGrid.height);
+                    contextGrid.fillStyle = "gray";
+                    var x = 0;
+                    for (x = 0; x <= canvasGrid.width; x += grid) {
+                        contextGrid.moveTo(0.5 + x + 0, 0);
+                        contextGrid.lineTo(0.5 + x + 0, canvasGrid.height + 0);
+                    }
+
+                    for (x = 0; x <= canvasGrid.height; x += grid) {
+                        contextGrid.moveTo(0, 0.5 + x + 0);
+                        contextGrid.lineTo(canvasGrid.width + 0, 0.5 + x + 0);
+                    }
+
+                    contextGrid.strokeStyle = "black";
+                    contextGrid.stroke();
+                    contextGrid.closePath();
+                }
+
+                function createConnectors(device) {
+                    var deviceCenter = calculateCenterPointForDevice(device);
+
+                    var halfDeviceHeight = device.getHeight() / 2 + 5;
+                    var halfDeviceWidth = device.getWidth() / 2 + 5;
+                    var connectorSize = 5;
+
+                    device.setConnectors(new Connectors());
+                    device.getConnectors().addConnector(
+                        new Connector(
+                            new Point(deviceCenter.getX(), deviceCenter.getY()),
+                            new Point(deviceCenter.getX(), deviceCenter.getY() - halfDeviceHeight),
+                            new Point(deviceCenter.getX(), deviceCenter.getY() - halfDeviceHeight - connectorSize),
+                            connectorSize,
+                            device
+                        )
+                    );
+                    device.getConnectors().addConnector(
+                        new Connector(
+                            new Point(deviceCenter.getX(), deviceCenter.getY()),
+                            new Point(deviceCenter.getX(), deviceCenter.getY() + halfDeviceHeight),
+                            new Point(deviceCenter.getX(), deviceCenter.getY() + halfDeviceHeight + connectorSize),
+                            connectorSize,
+                            device
+                        )
+                    );
+                    device.getConnectors().addConnector(
+                        new Connector(
+                            new Point(deviceCenter.getX(), deviceCenter.getY()),
+                            new Point(deviceCenter.getX() - halfDeviceWidth, deviceCenter.getY() ),
+                            new Point(deviceCenter.getX() - halfDeviceWidth - connectorSize, deviceCenter.getY()),
+                            connectorSize,
+                            device
+                        )
+                    );
+                    device.getConnectors().addConnector(
+                        new Connector(
+                            new Point(deviceCenter.getX(), deviceCenter.getY()),
+                            new Point(deviceCenter.getX() + halfDeviceWidth, deviceCenter.getY()),
+                            new Point(deviceCenter.getX() + halfDeviceWidth + connectorSize, deviceCenter.getY()),
+                            connectorSize,
+                            device
+                        )
+                    );
+                }
+
+                function drawConnectorsForDevice(device) {
+                    var deviceCenter = calculateCenterPointForDevice(device);
+                    var connector = [];
+
+                    var halfDeviceHeight = device.getHeight() / 2 + 5;
+                    var halfDeviceWidth = device.getWidth() / 2 + 5;
+                    var connectorSize = 5;
+
+                    contextConnectors.clearRect(0, 0, canvasConnectors.width, canvasConnectors.height);
+                    contextConnectors.fillStyle = "transparent";
+                    contextConnectors.strokeStyle = 'green';
+                    contextConnectors.lineWidth = 1;
+                    contextConnectors.beginPath();
+
+                    contextConnectors.moveTo(deviceCenter.getX(), deviceCenter.getY());
+                    contextConnectors.lineTo(deviceCenter.getX(), deviceCenter.getY() - halfDeviceHeight);
+                    contextConnectors.arc(deviceCenter.getX(), deviceCenter.getY() - halfDeviceHeight - connectorSize, connectorSize, 90, 360);
+
+                    contextConnectors.moveTo(deviceCenter.getX(), deviceCenter.getY());
+                    contextConnectors.lineTo(deviceCenter.getX(), deviceCenter.getY() + halfDeviceHeight);
+                    contextConnectors.arc(deviceCenter.getX(), deviceCenter.getY() + halfDeviceHeight + connectorSize, connectorSize, 180, 360);
+
+                    contextConnectors.moveTo(deviceCenter.getX(), deviceCenter.getY());
+                    contextConnectors.lineTo(deviceCenter.getX() - halfDeviceWidth, deviceCenter.getY());
+                    contextConnectors.arc(deviceCenter.getX() - halfDeviceWidth - connectorSize, deviceCenter.getY(), connectorSize, 0, 360);
+
+                    contextConnectors.moveTo(deviceCenter.getX(), deviceCenter.getY());
+                    contextConnectors.lineTo(deviceCenter.getX() + halfDeviceWidth + connectorSize, deviceCenter.getY());
+                    contextConnectors.moveTo(deviceCenter.getX() + halfDeviceWidth + connectorSize, deviceCenter.getY());
+                    contextConnectors.arc(deviceCenter.getX() + halfDeviceWidth + connectorSize * 2, deviceCenter.getY(), connectorSize, -135, -270, true);
+
+                    contextConnectors.stroke();
+                    contextConnectors.closePath();
+
+                    currentConnectors.push(connector);
+                }
+
+                /**
+                 * wenn innerhalb des devices, alle connectoren zeichnen
+                 *
+                 * wenn über einem bestimmten connector, also mit der maus über einer höhe, dann nur diesen connector zeichnen
+                 *
+                 * wenn außerhalb irgend eines connectors, keinen zeichnen und evtl. false zurück geben
+                 */
+                function drawConnectors(device) {
+                    contextConnectors.clearRect(0, 0, canvasConnectors.width, canvasConnectors.height);
+                    contextConnectors.fillStyle = "transparent";
+                    contextConnectors.strokeStyle = 'green';
+                    contextConnectors.lineWidth = 1;
+                    contextConnectors.beginPath();
+
+                    device.getConnectors().each(function(connector) {
+                        contextConnectors.moveTo(connector.getLineStart().getX(), connector.getLineStart().getY());
+                        contextConnectors.lineTo(connector.getLineEnd().getX(), connector.getLineEnd().getY());
+                        contextConnectors.moveTo(connector.getLineEnd().getX(), connector.getLineEnd().getY());
+                        contextConnectors.arc(connector.getZoneStart().getX(), connector.getZoneStart().getY(), connector.getZoneSize(), 0, 2 * Math.PI);
+                    });
+
+                    contextConnectors.stroke();
+                    contextConnectors.closePath();
+                }
+
+                function highlightConnector(device) {
+                    contextHighlights.setLineDash([0]);
+
+                    if (ACTION_DRAW_CABLE !== currentAction) {
+                        activeConnector = null;
+                    }
+                    if (null !== activeConnector) {
+                        drawHighlightConnector(activeConnector);
+                    }
+                    if (null !== activeStartConnector) {
+                        drawHighlightConnector(activeStartConnector);
+                    }
+
+                    if (null === activeConnector) {
+                        device.getConnectors().each(function (connector) {
+                            //                        console.log("Suche nach passendem Connector!");
+                            if (connector.getZoneStart().getX() - (connector.getZoneSize() / 2 ) < mousePos.getX()
+                                    && connector.getZoneStart().getY() - (connector.getZoneSize() / 2 ) < mousePos.getY()
+                                    && connector.getZoneStart().getX() + connector.getZoneSize() > mousePos.getX()
+                                    && connector.getZoneStart().getY() + connector.getZoneSize() > mousePos.getY()
+                            ) {
+                                activeConnector = connector;
+                                drawHighlightConnector(connector);
+                                return false;
+                            }
+                        });
+                    }
+
+                    // not connector active and dont draw cable, draw helpers for connectors of device!
+                    if (null === activeConnector
+                        && ACTION_DRAW_CABLE !== currentAction
+                    ) {
+//                        console.log("KEINEN GEFUNDEN!");
+                        drawConnectors(device);
+                    }
+                }
+
+                function drawHighlightConnector(connector) {
+                    contextHighlights.setLineDash([0]);
+                    contextHighlights.fillStyle = "transparent";
+                    contextHighlights.strokeStyle = 'red';
+                    contextHighlights.lineWidth = 2;
+                    contextHighlights.beginPath();
+                    contextHighlights.moveTo(connector.getLineStart().getX(), connector.getLineStart().getY());
+                    contextHighlights.lineTo(connector.getLineEnd().getX(), connector.getLineEnd().getY());
+                    contextHighlights.moveTo(connector.getLineEnd().getX(), connector.getLineEnd().getY());
+                    contextHighlights.arc(connector.getZoneStart().getX(), connector.getZoneStart().getY(), connector.getZoneSize(), 0, 2 * Math.PI);
+                    contextHighlights.stroke();
+                    contextHighlights.closePath();
+                }
+
+                var myNamespace = {};
+
+                function highlightDevice(object) {
+
+                    if (object instanceof Device) {
+                        jQuery(object.getElement()).addClass('hover');
+                        var devicesLayer = jQuery('#layerDevices');
+                        var zIndex = devicesLayer.css('z-index');
+
+                        if (150 != zIndex) {
+                            devicesLayer.data('z-index-orig', zIndex);
+                            devicesLayer.css({'z-index': 150});
+                        }
+                    } else if (object instanceof Wall) {
+                        highlightWall(object);
+                    }
+                }
+
+                myNamespace.round = function(number, precision) {
+                    var factor = Math.pow(10, precision);
+                    var tempNumber = number * factor;
+                    var roundedTempNumber = Math.round(tempNumber);
+                    return roundedTempNumber / factor;
+                };
+
+                function suggestConnectorForWall(wall) {
+                    if (true === cableActive) {
+                        activeConnector = new Connector(
+                            new Point(activeWallMouseHit.getX() + 15, activeWallMouseHit.getY()),
+                            activeWallMouseHit,
+                            activeWallMouseHit,
+                            20,
+                            activeWall
+                        );
+
+                        drawHighlightConnector(activeConnector);
+                    }
+                }
+
+                function init() {
+                    currentFloor = 0;
+                    initFloor();
+                }
+
+                function increaseFloor() {
+                    currentFloor++;
+                    initFloor();
+                    refreshCanvas();
+                    refreshButtons();
+                }
+
+                function decreaseFloor() {
+                    currentFloor--;
+                    initFloor();
+                    refreshCanvas();
+                    refreshButtons();
+                }
+
+                function initFloor() {
+                    if (undefined === floors[currentFloor]) {
+                        floors[currentFloor] = {
+                            walls: new Walls(),
+                            devices: new Devices(),
+                            cables: new Cables(),
+                            connectors: new Connectors()
+                        }
+                    }
+                }
+
+                init();
+                refreshCanvas();
+
+            </script>
+        {% endblock inline_javascript %}
+
+    </body>
+</html>

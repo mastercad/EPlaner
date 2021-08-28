@@ -1,11 +1,3 @@
 #index:
 #    path: /
-#    defaults: { _controller: 'App\Controller\DefaultController::index' }
-
-app_index_index:
-  path: /
-  controller: App\Controller\IndexController:index
-
-app_index_reloadet:
-  path: /reloadet
-  controller: App\Controller\IndexController:reloadet
+#    controller: App\Controller\DefaultController::index

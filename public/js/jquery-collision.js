@@ -62,7 +62,7 @@
             clone.y2 -= parseInt(this.proto.css("margin-bottom")) || 0;
         }
         return clone;
-    };
+    };;;
     CollisionCoords.prototype.move = function(dx, dy) {
         this.x1 += dx;
         this.x2 += dx;
@@ -126,7 +126,7 @@
             hit[0].dir = hit[0].dir == "Inside" ? "Outside" : hit[0].dir == "Outside" ? "Inside" : hit[0].dir == "N" ? "S" : hit[0].dir == "S" ? "N" : hit[0].dir == "W" ? "E" : hit[0].dir == "E" ? "W" : hit[0].dir == "NE" ? "SW" : hit[0].dir == "SW" ? "NE" : hit[0].dir == "SE" ? "NW" : hit[0].dir == "NW" ? "SE" : undefined;
         }
         return hit || [];
-    };
+    };;;
     CollisionCoords.prototype._overlaps = function(other, inclusive) {
         var c1 = other;
         var c2 = this;
@@ -255,7 +255,7 @@
         var oc = c.overlap;
         return Math.sqrt((tc.centerx() - oc.centerx()) * (tc.centerx() - oc.centerx()) +
         (tc.centery() - oc.centery()) * (tc.centery() - oc.centery()));
-    };
+    };;;
 
     function CollisionFactory(targets, obstacles, containment) {
         this.targets = targets;
@@ -951,4 +951,4 @@
     f.prototype.hash = function() {
         return this.type + "[" + this.colliderCoords.hash() + "," + this.obstacleCoords.hash() + "]"
     };
-})(jQuery);
+})(jQuery);;;
