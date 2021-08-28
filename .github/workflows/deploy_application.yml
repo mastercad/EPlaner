@@ -111,9 +111,18 @@ jobs:
             mkdir -p "${{ matrix.server.path }}/releases/${GITHUB_SHA}/public/images/content"
             mkdir -p "${{ matrix.server.path }}/releases/${GITHUB_SHA}/var"
 
-      - name: Prepare environment
-        run: |
-          cp "${{ matrix.server.path }}/releases/${GITHUB_SHA}/.env.dist" "${{ matrix.server.path }}/releases/${GITHUB_SHA}/.env"
+      - name: Prepare Environment
+        uses: appleboy/ssh-action@master
+        env:
+          GITHUB_SHA: ${{ github.sha }}
+        with:
+          host: ${{ matrix.server.ip }}
+          username: ${{ matrix.server.username }}
+          password: ${{ secrets.WEB_USER_PASSWORD }}
+          port: ${{ matrix.server.port }}
+          envs: GITHUB_SHA
+          script: |
+            cp "${{ matrix.server.path }}/releases/${GITHUB_SHA}/.env.dist" "${{ matrix.server.path }}/releases/${GITHUB_SHA}/.env"
 
       - name: Composer install
         uses: appleboy/ssh-action@master
