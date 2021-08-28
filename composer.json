@@ -1,4 +1,6 @@
 {
+    "name": "E-Planer",
+    "description": "Webfrontend based Tool to plane wired and some other things an canvas",
     "type": "project",
     "license": "proprietary",
     "require": {
