@@ -111,6 +111,10 @@ jobs:
             mkdir -p "${{ matrix.server.path }}/releases/${GITHUB_SHA}/public/images/content"
             mkdir -p "${{ matrix.server.path }}/releases/${GITHUB_SHA}/var"
 
+      - name: Prepare environment
+        run: |
+          cp .env.dist .env
+
       - name: Composer install
         uses: appleboy/ssh-action@master
         env:

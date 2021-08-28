@@ -33,7 +33,9 @@ jobs:
       run: composer validate --strict
 
     - name: Prepare environment
-      run: echo 'APP_ENV=dev' > .env.local
+      run: |
+        cp .env.dist .env
+        echo 'APP_ENV=dev' > .env.local
 
     - name: Install dependencies
       run: composer install --no-interaction --prefer-dist --no-progress
